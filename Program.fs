@@ -21,7 +21,7 @@ module LoxFs =
             Environment.Exit code
 
         let run source =
-            let scanner = Scanner (source)
+            let scanner = Scanner(source)
             let tokens = scanner.ScanTokens
             printfn "%s" <| tokens.ToString()
 
