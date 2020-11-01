@@ -4,6 +4,12 @@ open System.IO
 
 [<EntryPoint>]
 let main argv =
+    let report line where message =
+        printfn "[line %s] Error%s:%s" line where message
+
+    let error line message =
+        report line "" message
+
     let usage code =
         printfn "Usage: dotnet run [script]"
         Environment.Exit code
