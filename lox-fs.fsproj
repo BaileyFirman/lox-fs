@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="TokenType.fs" />
     <Compile Include="Token.fs" />
+    <Compile Include="Scanner.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
