@@ -2,6 +2,9 @@ namespace LoxFs
 
 open System
 open System.IO
+open Token
+open TokenType
+open Scanner
 
 module LoxFs =
     [<EntryPoint>]
@@ -16,6 +19,12 @@ module LoxFs =
         let usage code =
             printfn "Usage: dotnet run [script]"
             Environment.Exit code
+
+        let run source =
+            let scanner = Scanner (source)
+            let tokens = scanner.ScanTokens
+            printfn "%s" <| tokens.ToString()
+
 
         let runFile path =
             let file = File.ReadAllText path
