@@ -5,30 +5,26 @@ open System.IO
 open Token
 open TokenType
 open Scanner
+open Error
 
 module LoxFs =
     [<EntryPoint>]
     let main argv =
-        let mutable hadError = false
-
-        let report line where message =
-            printfn "[line %s] Error%s:%s" line where message
-
-        let error line message = report line "" message
+        let errorHandler = ErrorHandler(false)
 
         let usage code =
             printfn "Usage: dotnet run [script]"
             Environment.Exit code
 
         let run source =
-            let scanner = Scanner(source)
+            let scanner = Scanner(source, errorHandler)
             let tokens = scanner.ScanTokens
             printfn "%s" <| tokens.ToString()
 
 
         let runFile path =
             let file = File.ReadAllText path
-            match hadError with
+            match errorHandler.HadError with
             | true -> Environment.Exit 65
             | false -> Environment.Exit 64
             ()
@@ -37,7 +33,7 @@ module LoxFs =
             printf "> "
             let line = Console.ReadLine()
             printfn "%s" line
-            hadError <- false
+            errorHandler.SetError
             runPrompt code
 
         let exitCode = 64

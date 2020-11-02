@@ -4,9 +4,11 @@ open System
 open System.IO
 open Token
 open TokenType
+open Error
 
 module Scanner =
-    type Scanner(source) =
+    type Scanner(source, errorHandler) =
+        let errorHandler: ErrorHandler = errorHandler
         let source: string = source
         let mutable tokens: List<Token> = []
         let mutable start = 0
@@ -37,9 +39,13 @@ module Scanner =
                 | '+' -> PLUS
                 | ';' -> SEMICOLON
                 | '*' -> STAR
-                | _ -> failwith "ERROR Lexem not recognised"
+                | _ ->
+                    errorHandler.Error line "Unexpected Character"
+                    ERROR
 
-            __.AddToken tokenType null
+            match tokenType <> ERROR with
+            | true -> __.AddToken tokenType null
+            | _ -> ()
 
         member __.IsAtEnd = current >= source.Length
 

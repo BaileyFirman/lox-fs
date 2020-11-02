@@ -8,6 +8,7 @@ module Token =
         let lexeme: string = lexeme
         let literal: obj = literal
         let line: int = line
+
         member this.ToString() =
             let tokenTypeString = tokenType.ToString()
             let literalString = literal.ToString()

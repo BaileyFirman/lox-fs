@@ -45,3 +45,4 @@ module TokenType =
         | VAR
         | WHILE
         | EOF
+        | ERROR
