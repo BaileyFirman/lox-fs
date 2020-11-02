@@ -9,7 +9,6 @@ module Token =
         let literal: obj = literal
         let line: int = line
 
-        member this.ToString() =
+        override this.ToString() =
             let tokenTypeString = tokenType.ToString()
-            let literalString = literal.ToString()
-            printfn "%s %s %s" tokenTypeString lexeme literalString
+            sprintf "%s %s" tokenTypeString lexeme

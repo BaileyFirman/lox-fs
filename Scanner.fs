@@ -17,7 +17,7 @@ module Scanner =
 
         member __.IsAtEnd = current >= source.Length
 
-        member __.Advance =
+        member __.Advance () =
             current <- current + 1
             source.[current - 1]
 
@@ -32,9 +32,27 @@ module Scanner =
             | false ->
                 current <- current + 1
                 true
+        
+        member __.Peek =
+            match __.IsAtEnd with
+            | true -> '\u0004'
+            | false -> source.[current]
 
-        member __.ScanToken =
-            let c = ' ' // advance
+        member __.ScanToken () =
+            let c = __.Advance ()
+
+            let matchEqual t f =
+                if __.MatchChar '=' then t else f
+
+            let matchDivision =
+                let rec comment () =
+                    match __.Peek <> '\n' && (not __.IsAtEnd) with
+                    | true ->
+                        __.Advance () |> ignore
+                        comment ()
+                    | false -> COMMENT
+                if __.MatchChar '/'
+                    then comment () else SLASH
 
             let tokenType =
                 match c with
@@ -48,22 +66,27 @@ module Scanner =
                 | '+' -> PLUS
                 | ';' -> SEMICOLON
                 | '*' -> STAR
+                | '!' -> matchEqual BANGEQUAL BANG
+                | '=' -> matchEqual EQUALEQUAL EQUAL
+                | '<' -> matchEqual LESSEQUAL LESS
+                | '>' -> matchEqual GREATEREQUAL GREATER
+                | '/' -> matchDivision
                 | _ ->
                     errorHandler.Error line "Unexpected Character"
                     ERROR
 
             match tokenType <> ERROR with
-            | true -> __.AddToken tokenType null
+            | true -> __.AddToken tokenType tokenType
             | _ -> ()
 
         member __.ScanTokens: List<Token> =
-            let rec scanLoop tokens =
+            let rec scanLoop () =
                 match __.IsAtEnd with
                 | true -> ()
                 | false ->
                     start <- current
-                    // scanToken
-                    scanLoop tokens
-
+                    __.ScanToken ()
+                    scanLoop ()
+            scanLoop ()
             tokens <- tokens @ [ Token(EOF, "", null, 0) ]
             tokens
