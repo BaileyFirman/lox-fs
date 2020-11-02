@@ -15,6 +15,8 @@ module Scanner =
         let mutable current = 0
         let mutable line = 1
 
+        member __.IsAtEnd = current >= source.Length
+
         member __.Advance =
             current <- current + 1
             source.[current - 1]
@@ -23,6 +25,13 @@ module Scanner =
             let text = source.[start..current]
             let newToken = Token(tokenType, text, literal, line)
             tokens <- tokens @ [ newToken ]
+
+        member __.MatchChar expected =
+            match __.IsAtEnd || source.[current] <> expected with
+            | true -> false
+            | false ->
+                current <- current + 1
+                true
 
         member __.ScanToken =
             let c = ' ' // advance
@@ -46,8 +55,6 @@ module Scanner =
             match tokenType <> ERROR with
             | true -> __.AddToken tokenType null
             | _ -> ()
-
-        member __.IsAtEnd = current >= source.Length
 
         member __.ScanTokens: List<Token> =
             let rec scanLoop tokens =
