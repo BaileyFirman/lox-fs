@@ -17,7 +17,7 @@ module Scanner =
 
         member __.IsAtEnd = current >= source.Length
 
-        member __.Advance () =
+        member __.Advance() =
             current <- current + 1
             source.[current - 1]
 
@@ -32,27 +32,34 @@ module Scanner =
             | false ->
                 current <- current + 1
                 true
-        
+
         member __.Peek =
             match __.IsAtEnd with
             | true -> '\u0004'
             | false -> source.[current]
 
-        member __.ScanToken () =
-            let c = __.Advance ()
+        member __.ScanToken() =
+            let c = __.Advance()
 
-            let matchEqual t f =
-                if __.MatchChar '=' then t else f
+            let matchEqual t f = if __.MatchChar '=' then t else f
 
             let matchDivision () =
                 let rec comment () =
                     match __.Peek <> '\n' && (not __.IsAtEnd) with
                     | true ->
-                        __.Advance () |> ignore
+                        __.Advance() |> ignore
                         comment ()
                     | false -> COMMENT
-                if __.MatchChar '/'
-                    then comment () else SLASH
+
+                if __.MatchChar '/' then comment () else SLASH
+
+            let newline () =
+                line <- line + 1
+                WHITESPACE
+
+            let error line =
+                errorHandler.Error line "Unexpected Character"
+                ERROR
 
             let tokenType =
                 match c with
@@ -71,10 +78,12 @@ module Scanner =
                 | '<' -> matchEqual LESSEQUAL LESS
                 | '>' -> matchEqual GREATEREQUAL GREATER
                 | '/' -> matchDivision ()
-                | ' ' | '\r' | '\t' -> WHITESPACE
-                | _ ->
-                    errorHandler.Error line "Unexpected Character"
-                    ERROR
+                | ' '
+                | '\r'
+                | '\t' -> WHITESPACE
+                | '\n' -> newline ()
+                | _ -> error line
+
 
             match tokenType with
             | WHITESPACE
@@ -87,8 +96,9 @@ module Scanner =
                 | true -> ()
                 | false ->
                     start <- current
-                    __.ScanToken ()
+                    __.ScanToken()
                     scanLoop ()
+
             scanLoop ()
             tokens <- tokens @ [ Token(EOF, "", null, 0) ]
             tokens

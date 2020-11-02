@@ -49,4 +49,3 @@ module TokenType =
         | ERROR
         | COMMENT
         | WHITESPACE
-
