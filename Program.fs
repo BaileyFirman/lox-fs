@@ -21,7 +21,6 @@ module LoxFs =
             let tokens = scanner.ScanTokens
             printfn "%s" <| tokens.ToString()
 
-
         let runFile path =
             let file = File.ReadAllText path
             match errorHandler.HadError with
@@ -32,8 +31,13 @@ module LoxFs =
         let rec runPrompt code =
             printf "> "
             let line = Console.ReadLine()
-            printfn "%s" line
-            errorHandler.SetError
+            let scanner = Scanner(line, errorHandler)
+            let tokens = scanner.ScanTokens
+            tokens
+            |> Seq.iter (fun x -> printfn "%s" <| x.ToString())
+            |> ignore
+            printfn ""
+            errorHandler.SetError false
             runPrompt code
 
         let exitCode = 64
