@@ -10,4 +10,4 @@ module Error =
         member __.Error line message = __.Report line "" message
 
         member __.HadError = hadError
-        member __.SetError = hadError <- true
+        member __.SetError error = hadError <- error

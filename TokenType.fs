@@ -46,3 +46,4 @@ module TokenType =
         | WHILE
         | EOF
         | ERROR
+        | COMMENT
