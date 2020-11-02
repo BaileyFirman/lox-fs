@@ -22,7 +22,7 @@ module Scanner =
             source.[current - 1]
 
         member __.AddToken tokenType literal =
-            let text = source.[start..current]
+            let text = source.[start..(current - 1)]
             let newToken = Token(tokenType, text, literal, line)
             tokens <- tokens @ [ newToken ]
 
@@ -44,7 +44,7 @@ module Scanner =
             let matchEqual t f =
                 if __.MatchChar '=' then t else f
 
-            let matchDivision =
+            let matchDivision () =
                 let rec comment () =
                     match __.Peek <> '\n' && (not __.IsAtEnd) with
                     | true ->
@@ -70,14 +70,16 @@ module Scanner =
                 | '=' -> matchEqual EQUALEQUAL EQUAL
                 | '<' -> matchEqual LESSEQUAL LESS
                 | '>' -> matchEqual GREATEREQUAL GREATER
-                | '/' -> matchDivision
+                | '/' -> matchDivision ()
+                | ' ' | '\r' | '\t' -> WHITESPACE
                 | _ ->
                     errorHandler.Error line "Unexpected Character"
                     ERROR
 
-            match tokenType <> ERROR with
-            | true -> __.AddToken tokenType tokenType
-            | _ -> ()
+            match tokenType with
+            | WHITESPACE
+            | ERROR -> ()
+            | _ -> __.AddToken tokenType tokenType
 
         member __.ScanTokens: List<Token> =
             let rec scanLoop () =

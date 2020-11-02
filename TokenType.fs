@@ -45,5 +45,8 @@ module TokenType =
         | VAR
         | WHILE
         | EOF
+        // Implementation specific
         | ERROR
         | COMMENT
+        | WHITESPACE
+
