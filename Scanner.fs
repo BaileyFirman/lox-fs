@@ -17,7 +17,7 @@ module Scanner =
 
         member __.IsAtEnd = current >= source.Length
 
-        member __.Advance () =
+        member __.Advance() =
             current <- current + 1
             source.[current - 1]
 
@@ -33,21 +33,21 @@ module Scanner =
                 current <- current + 1
                 true
 
-        member __.Peek () =
+        member __.Peek() =
             match __.IsAtEnd with
             | true -> '\u0004'
             | false -> source.[current]
 
         member __.ScanToken() =
-            let c = __.Advance ()
+            let c = __.Advance()
 
             let matchEqual t f = if __.MatchChar '=' then t else f
 
             let matchDivision () =
                 let rec comment () =
-                    match __.Peek () <> '\n' && (not __.IsAtEnd) with
+                    match __.Peek() <> '\n' && (not __.IsAtEnd) with
                     | true ->
-                        __.Advance () |> ignore
+                        __.Advance() |> ignore
                         comment ()
                     | false -> COMMENT
 
@@ -55,15 +55,15 @@ module Scanner =
 
             let matchString () =
                 let rec string () =
-                    match __.Peek () <> '"' && (not __.IsAtEnd) with
+                    match __.Peek() <> '"' && (not __.IsAtEnd) with
                     | true ->
-                        match __.Peek () = '\n' with
+                        match __.Peek() = '\n' with
                         | true -> line <- line + 1
                         | false -> ()
-                        __.Advance () |> ignore
+                        __.Advance() |> ignore
                         string ()
                     | false -> ()
-                
+
                 string ()
 
                 match __.IsAtEnd with
@@ -71,9 +71,9 @@ module Scanner =
                     errorHandler.Error line "Unterminated String."
                     ()
                 | false ->
-                    __.Advance () |> ignore
+                    __.Advance() |> ignore
                     ()
-                
+
                 let value = source.[(start + 1)..(current - 1)]
                 __.AddToken STRING value
 
@@ -86,6 +86,14 @@ module Scanner =
             let error line =
                 errorHandler.Error line "Unexpected Character"
                 ERROR
+
+            let matchNumber () =
+                NUMBER
+
+            let handleOther (c: char) =
+                match Char.IsDigit c with
+                | true -> matchNumber ()
+                | false -> error line
 
             let tokenType =
                 match c with
@@ -109,13 +117,14 @@ module Scanner =
                 | '\r'
                 | '\t' -> WHITESPACE
                 | '\n' -> newline ()
-                | _ -> error line
+                | c -> handleOther c
 
 
             match tokenType with
             | WHITESPACE
             | ERROR
-            | STRING -> ()
+            | STRING
+            | NUMBER -> ()
             | _ -> __.AddToken tokenType tokenType
 
         member __.ScanTokens: List<Token> =
