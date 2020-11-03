@@ -17,7 +17,7 @@ module Scanner =
 
         member __.IsAtEnd = current >= source.Length
 
-        member __.Advance() =
+        member __.Advance () =
             current <- current + 1
             source.[current - 1]
 
@@ -33,25 +33,51 @@ module Scanner =
                 current <- current + 1
                 true
 
-        member __.Peek =
+        member __.Peek () =
             match __.IsAtEnd with
             | true -> '\u0004'
             | false -> source.[current]
 
         member __.ScanToken() =
-            let c = __.Advance()
+            let c = __.Advance ()
 
             let matchEqual t f = if __.MatchChar '=' then t else f
 
             let matchDivision () =
                 let rec comment () =
-                    match __.Peek <> '\n' && (not __.IsAtEnd) with
+                    match __.Peek () <> '\n' && (not __.IsAtEnd) with
                     | true ->
-                        __.Advance() |> ignore
+                        __.Advance () |> ignore
                         comment ()
                     | false -> COMMENT
 
                 if __.MatchChar '/' then comment () else SLASH
+
+            let matchString () =
+                let rec string () =
+                    match __.Peek () <> '"' && (not __.IsAtEnd) with
+                    | true ->
+                        match __.Peek () = '\n' with
+                        | true -> line <- line + 1
+                        | false -> ()
+                        __.Advance () |> ignore
+                        string ()
+                    | false -> ()
+                
+                string ()
+
+                match __.IsAtEnd with
+                | true ->
+                    errorHandler.Error line "Unterminated String."
+                    ()
+                | false ->
+                    __.Advance () |> ignore
+                    ()
+                
+                let value = source.[(start + 1)..(current - 1)]
+                __.AddToken STRING value
+
+                STRING
 
             let newline () =
                 line <- line + 1
@@ -78,6 +104,7 @@ module Scanner =
                 | '<' -> matchEqual LESSEQUAL LESS
                 | '>' -> matchEqual GREATEREQUAL GREATER
                 | '/' -> matchDivision ()
+                | '"' -> matchString ()
                 | ' '
                 | '\r'
                 | '\t' -> WHITESPACE
@@ -87,7 +114,8 @@ module Scanner =
 
             match tokenType with
             | WHITESPACE
-            | ERROR -> ()
+            | ERROR
+            | STRING -> ()
             | _ -> __.AddToken tokenType tokenType
 
         member __.ScanTokens: List<Token> =
