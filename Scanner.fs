@@ -33,10 +33,16 @@ module Scanner =
                 current <- current + 1
                 true
 
-        member __.Peek() =
+        member __.Peek () =
             match __.IsAtEnd with
             | true -> '\u0004'
             | false -> source.[current]
+
+        member __.PeekNext () =
+            let next = current + 1
+            match next >= source.Length with
+            | true -> '\u0004'
+            | false -> source.[next]
 
         member __.ScanToken() =
             let c = __.Advance()
@@ -88,6 +94,28 @@ module Scanner =
                 ERROR
 
             let matchNumber () =
+                let rec number () =
+                    let next = __.Peek ()
+                    match Char.IsDigit next with
+                    | true ->
+                        __.Advance ()
+                        |> ignore
+                        number ()
+                    | false -> ()
+
+                number ()
+                
+                let next = __.Peek ()
+                let nextIsDigit = Char.IsDigit <| __.PeekNext ()
+                match next = '.' && nextIsDigit with
+                | true ->
+                    __.Advance ()
+                    |> ignore
+                    number ()
+                | false -> ()
+                
+                let double = Double.Parse source.[start..current]
+                __.AddToken NUMBER double
                 NUMBER
 
             let handleOther (c: char) =
