@@ -33,12 +33,12 @@ module Scanner =
                 current <- current + 1
                 true
 
-        member __.Peek () =
+        member __.Peek() =
             match __.IsAtEnd with
             | true -> '\u0004'
             | false -> source.[current]
 
-        member __.PeekNext () =
+        member __.PeekNext() =
             let next = current + 1
             match next >= source.Length with
             | true -> '\u0004'
@@ -95,33 +95,68 @@ module Scanner =
 
             let matchNumber () =
                 let rec number () =
-                    let next = __.Peek ()
+                    let next = __.Peek()
                     match Char.IsDigit next with
                     | true ->
-                        __.Advance ()
-                        |> ignore
+                        __.Advance() |> ignore
                         number ()
                     | false -> ()
 
                 number ()
-                
-                let next = __.Peek ()
-                let nextIsDigit = Char.IsDigit <| __.PeekNext ()
+
+                let next = __.Peek()
+                let nextIsDigit = Char.IsDigit <| __.PeekNext()
                 match next = '.' && nextIsDigit with
                 | true ->
-                    __.Advance ()
-                    |> ignore
+                    __.Advance() |> ignore
                     number ()
                 | false -> ()
-                
+
                 let double = Double.Parse source.[start..current]
                 __.AddToken NUMBER double
                 NUMBER
 
+            let isAlpha c = Char.IsLetter c || c = '_'
+            let isAlphaNumeric c = Char.IsDigit c || isAlpha c
+
+            let matchIdentifier () =
+                let rec identifier () =
+                    if isAlphaNumeric <| __.Peek() then
+                        __.Advance() |> ignore
+                        identifier ()
+                    else
+                        ()
+
+                let string = source.[start..current]
+
+                let tokenType =
+                    match string with
+                    | "and" -> AND
+                    | "class" -> CLASS
+                    | "else" -> ELSE
+                    | "false" -> FALSE
+                    | "for" -> FOR
+                    | "fun" -> FUN
+                    | "if" -> IF
+                    | "nil" -> NIL
+                    | "or" -> OR
+                    | "print" -> PRINT
+                    | "return" -> RETURN
+                    | "super" -> SUPER
+                    | "this" -> THIS
+                    | "true" -> TRUE
+                    | "var" -> VAR
+                    | "while" -> WHILE
+                    | _ -> IDENTIFIER
+
+                __.AddToken tokenType string
+
+                tokenType
+
             let handleOther (c: char) =
-                match Char.IsDigit c with
-                | true -> matchNumber ()
-                | false -> error line
+                if Char.IsDigit c then matchNumber ()
+                elif isAlpha c then matchIdentifier ()
+                else error line
 
             let tokenType =
                 match c with
