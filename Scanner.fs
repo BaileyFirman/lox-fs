@@ -112,7 +112,7 @@ module Scanner =
                     number ()
                 | false -> ()
 
-                let double = Double.Parse source.[start..current]
+                let double = Double.Parse source.[start..(current - 1)]
                 __.AddToken NUMBER double
                 NUMBER
 
