@@ -1,8 +1,9 @@
 /bin
 /obj
-/tool/bin
-/tool/obj
+/src/Tools/GenerateAst/bin
+/src/Tools/GenerateAst/obj
 .ionide
 .fake
 .vscode
 .vs
+.DS_Store
