@@ -1,5 +1,7 @@
 /bin
 /obj
+/tool/bin
+/tool/obj
 .ionide
 .fake
 .vscode
