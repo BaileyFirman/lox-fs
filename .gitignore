@@ -1,4 +1,5 @@
-/bin
+src/Lox/bin
+src/Lox/obj
 /obj
 /src/Tools/GenerateAst/bin
 /src/Tools/GenerateAst/obj

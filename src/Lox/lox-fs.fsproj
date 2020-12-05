@@ -10,6 +10,6 @@
     <Compile Include="Error.fs" />
     <Compile Include="Token.fs" />
     <Compile Include="Scanner.fs" />
-    <Compile Include="Program.fs" />
+    <Compile Include="Lox.fs" />
   </ItemGroup>
 </Project>
