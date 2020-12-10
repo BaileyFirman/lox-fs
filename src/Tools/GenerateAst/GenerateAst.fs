@@ -5,8 +5,20 @@ let exitWithMessage message =
     printfn "%s" message
     Environment.Exit 64
 
-let defineAst outputDir baseName types =
+let defineType baseName className fieldList =
+    ""
+
+let defineAst outputDir baseName (types: string[]) =
     let path = $"{outputDir}/{baseName}/.java"
+
+    let astClasses =
+        types
+        |> Array.map (fun t ->
+                        let splitType = t.Split ":"
+                        let className = splitType.[0].Trim()
+                        let field = splitType.[1].Trim()
+                        defineType baseName className field)
+        |> String.Concat
 
     let program =
         [|
@@ -16,6 +28,7 @@ let defineAst outputDir baseName types =
             "\n"
             "abstract class "
             baseName
+            astClasses
             " {"
             "}"
             "\n"
@@ -28,7 +41,7 @@ let defineAst outputDir baseName types =
 [<EntryPoint>]
 let main argv =
     let outputDir = if argv.Length <> 1 then String.Empty else argv.[0]
-    defineAst outputDir "TEST" () |> ignore
+    defineAst outputDir "TEST" [| "TEST:TYPE" |] |> ignore
     if outputDir = String.Empty
         then exitWithMessage "Usage: generate_ast <output directory>"
         else ()
