@@ -1,11 +1,19 @@
 open System
-open System.Text
 
 let exitWithMessage message =
     printfn "%s" message
     Environment.Exit 64
 
-let defineType baseName className fieldList =
+let defineType baseName className (fieldList: string) =
+    let openType = $"  static class {className} extends {baseName}" + " {\n"
+    let constructor = $"    {className}({fieldList})" + "{\n"
+    let fieldParams =
+        fieldList.Split ", "
+        |> Array.map(fun f ->
+                        let name = (f.Split " ").[1]
+                        $"      this.{name} = {name};\n")
+        |> String.Concat
+    let close = "    }\n\n"
     ""
 
 let defineAst outputDir baseName (types: string[]) =
