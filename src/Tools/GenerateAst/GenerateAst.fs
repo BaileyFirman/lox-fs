@@ -7,14 +7,24 @@ let exitWithMessage message =
 let defineType baseName className (fieldList: string) =
     let openType = $"  static class {className} extends {baseName}" + " {\n"
     let constructor = $"    {className}({fieldList})" + "{\n"
+
+    let fields = fieldList.Split ", "
+
     let fieldParams =
-        fieldList.Split ", "
+        fields
         |> Array.map(fun f ->
                         let name = (f.Split " ").[1]
                         $"      this.{name} = {name};\n")
         |> String.Concat
+    
     let close = "    }\n\n"
-    ""
+
+    let finalFields =
+        fields
+        |> Array.map(fun f -> $"  final {f};")
+    let closeType = "  }"
+
+    $"{openType}{constructor}{fields}{fieldParams}{close}{finalFields}{closeType}"
 
 let defineAst outputDir baseName (types: string[]) =
     let path = $"{outputDir}/{baseName}/.java"
