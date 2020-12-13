@@ -48,7 +48,7 @@ let defineType baseName className (fieldList: string) =
                         $"      this.{name} = {name};\n")
         |> String.Concat
     
-    let close = "    }\n\n"
+    let close = "    }\n"
 
     let finalFields =
         fields
@@ -56,7 +56,16 @@ let defineType baseName className (fieldList: string) =
         |> String.Concat
     let closeType = "  }\n"
 
-    $"{openType}{constructor}{fieldParams}{close}{finalFields}{closeType}"
+    let visitorPattern =
+        [|
+            $"\n    @Override\n"
+            "    <R> R accept(Visitor<R> visitor) {\n"
+            $"      return visitor.visit{className}{baseName}(this);\n"
+            "    }\n"
+        |]
+        |> String.Concat
+
+    $"{openType}{constructor}{fieldParams}{close}{finalFields}{visitorPattern}{closeType}"
 
 let defineAst outputDir baseName (types: string[]) =
     let path = $"{outputDir}/{baseName}.java"
