@@ -9,7 +9,7 @@ let defineVisitor (baseName: string) (types: string[]) =
         types
         |> Array.map(fun t ->
             let typeName = (t.Split ":").[0].Trim()
-            $"  R visit{typeName}{baseName}({typeName} {baseName.ToLower});")
+            $"  R visit{typeName}{baseName}({typeName} {baseName.ToLower()});")
         |> String.Concat
 
     let visitor =
@@ -79,8 +79,16 @@ let defineAst outputDir baseName (types: string[]) =
 
 [<EntryPoint>]
 let main argv =
+    let typeDescriptions =
+        [|
+            "Binary   : Expr left, Token operator, Expr right"
+            "Grouping : Expr expression"
+            "Literal  : Object value"
+            "Unary    : Token operator, Expr right"
+        |]
+
     let outputDir = if argv.Length <> 1 then String.Empty else argv.[0]
-    defineAst outputDir "TEST" [| "TEST:TYPE" |] |> ignore
+    defineAst outputDir "Expr" typeDescriptions |> ignore
     if outputDir = String.Empty
         then exitWithMessage "Usage: generate_ast <output directory>"
         else ()
