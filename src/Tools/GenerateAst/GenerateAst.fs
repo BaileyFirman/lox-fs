@@ -22,14 +22,14 @@ let defineVisitor (baseName: string) (types: string[]) =
         types
         |> Array.map(fun t ->
             let typeName = (t.Split ":").[0].Trim()
-            $"  R visit{typeName}{baseName}({typeName} {baseName.ToLower()});")
+            $"    R visit{typeName}{baseName}({typeName} {baseName.ToLower()});\n")
         |> String.Concat
 
     let visitor =
         [|
-            " interface Visitor<R> {"
+            "  interface Visitor<R> {\n"
             typeVisits
-            " }"
+            "  }\n"
         |]
         |> String.Concat
 
@@ -52,9 +52,9 @@ let defineType baseName className (fieldList: string) =
 
     let finalFields =
         fields
-        |> Array.map(fun f -> $"  final {f};")
+        |> Array.map(fun f -> $"    final {f};\n")
         |> String.Concat
-    let closeType = "  }"
+    let closeType = "  }\n"
 
     $"{openType}{constructor}{fieldParams}{close}{finalFields}{closeType}"
 
@@ -72,17 +72,14 @@ let defineAst outputDir baseName (types: string[]) =
 
     let program =
         [|
-            "package com.craftinginterpreters.lox;"
-            "\n"
-            "import java.util.List;"
-            "\n"
-            "abstract class "
-            baseName
-            " {"
+            "package com.craftinginterpreters.lox;\n"
+            "import java.util.List;\n"
+            $"abstract class {baseName}"
+            " {\n"
             defineVisitor baseName types
             astClasses
             "\n"
-            " abstract <R> R accept(Visitor<R> visitor);"
+            "  abstract <R> R accept(Visitor<R> visitor);\n"
             "}"
             "\n"
         |]
