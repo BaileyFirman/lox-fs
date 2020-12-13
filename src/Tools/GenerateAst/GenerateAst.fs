@@ -4,6 +4,24 @@ let exitWithMessage message =
     printfn "%s" message
     Environment.Exit 64
 
+let defineVisitor (baseName: string) (types: string[]) =
+    let typeVisits =
+        types
+        |> Array.map(fun t ->
+            let typeName = (t.Split ":").[0].Trim()
+            $"  R visit{typeName}{baseName}({typeName} {baseName.ToLower});")
+        |> String.Concat
+
+    let visitor =
+        [|
+            " interface Visitor<R> {"
+            typeVisits
+            " }"
+        |]
+        |> String.Concat
+
+    visitor
+
 let defineType baseName className (fieldList: string) =
     let openType = $"  static class {className} extends {baseName}" + " {\n"
     let constructor = $"    {className}({fieldList})" + "{\n"
@@ -46,8 +64,11 @@ let defineAst outputDir baseName (types: string[]) =
             "\n"
             "abstract class "
             baseName
-            astClasses
             " {"
+            defineVisitor baseName types
+            astClasses
+            "\n"
+            " abstract <R> R accept(Visitor<R> visitor);"
             "}"
             "\n"
         |]
