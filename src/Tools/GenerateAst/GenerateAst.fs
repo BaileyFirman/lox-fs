@@ -1,4 +1,17 @@
+open Microsoft.FSharp.Core
 open System
+open System.IO
+
+module FileActions =
+    let eofCharacter = '\u0004'.ToString()
+
+    let loadFileString filepath =
+        let fileAsString = File.ReadAllText filepath
+        fileAsString + eofCharacter
+
+    let writeFileString filepath file =
+        File.WriteAllText(filepath, file)
+        0
 
 let exitWithMessage message =
     printfn "%s" message
@@ -40,12 +53,13 @@ let defineType baseName className (fieldList: string) =
     let finalFields =
         fields
         |> Array.map(fun f -> $"  final {f};")
+        |> String.Concat
     let closeType = "  }"
 
-    $"{openType}{constructor}{fields}{fieldParams}{close}{finalFields}{closeType}"
+    $"{openType}{constructor}{fieldParams}{close}{finalFields}{closeType}"
 
 let defineAst outputDir baseName (types: string[]) =
-    let path = $"{outputDir}/{baseName}/.java"
+    let path = $"{outputDir}/{baseName}.java"
 
     let astClasses =
         types
@@ -74,7 +88,8 @@ let defineAst outputDir baseName (types: string[]) =
         |]
         |> String.Concat
 
-    printf "%s" program 
+    printf "%s" program
+    FileActions.writeFileString $"{baseName}.java" program |> ignore
     0
 
 [<EntryPoint>]
@@ -88,7 +103,7 @@ let main argv =
         |]
 
     let outputDir = if argv.Length <> 1 then String.Empty else argv.[0]
-    defineAst outputDir "Expr" typeDescriptions |> ignore
+    let ast = defineAst outputDir "Expr" typeDescriptions |> ignore
     if outputDir = String.Empty
         then exitWithMessage "Usage: generate_ast <output directory>"
         else ()
