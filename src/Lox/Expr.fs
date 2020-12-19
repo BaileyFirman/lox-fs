@@ -25,9 +25,9 @@ module Expr =
         let expression: Expr = expression
         member __.Accept (visitor: IVisitor<'T>) = visitor.VisitGroupingExpr(this)
 
-    and Literal(value) as this =
+    and Literal(value: obj) as this =
         inherit Expr()
-        let value: Expr = value
+        let value: obj = value
         member __.Accept (visitor: IVisitor<'T>) = visitor.VisitLiteralExpr(this)
 
     and Unary(operator, right) as this =
