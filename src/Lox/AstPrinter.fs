@@ -24,16 +24,16 @@ module AstPrinter =
 
         interface IVisitor<string> with
             member __.VisitBinaryExpr(expr: Binary): string =
-                let exprs = [| expr.left; expr.right |]
-                __.parenthesize exprs expr.operator.lexeme
+                let exprs = [| expr.Left; expr.Right |]
+                __.parenthesize exprs expr.Operator.lexeme
 
             member __.VisitGroupingExpr(expr: Grouping): string =
-                let exprs = [| expr.expression |]
+                let exprs = [| expr.Expression |]
                 __.parenthesize exprs "group"
 
             member __.VisitLiteralExpr(expr: Literal): string =
-                if expr.value = null then "nil" else expr.value.ToString()
+                if expr.Value = null then "nil" else expr.Value.ToString()
 
             member __.VisitUnaryExpr(expr: Unary): string =
-                let exprs = [| expr.right |]
-                __.parenthesize exprs expr.operator.lexeme
+                let exprs = [| expr.Right |]
+                __.parenthesize exprs expr.Operator.lexeme
