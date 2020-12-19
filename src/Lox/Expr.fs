@@ -4,34 +4,34 @@ open Token
 
 module Expr =
     type IVisitor<'T> =
-        abstract VisitBinaryExpr: Binary -> 'T
-        abstract VisitGroupingExpr: Grouping -> 'T
-        abstract VisitLiteralExpr: Literal -> 'T
-        abstract VisitUnaryExpr: Unary -> 'T
+        abstract member VisitBinaryExpr: Binary -> 'T
+        abstract member VisitGroupingExpr: Grouping -> 'T
+        abstract member VisitLiteralExpr: Literal -> 'T
+        abstract member VisitUnaryExpr: Unary -> 'T
 
-    and Expr() =
-        // abstract Accept: IVisitor<'T> -> 'T
-        member __.Accept (visitor: IVisitor<'T>) = visitor
+    and IExpr =
+        // inherit IVisitor<obj>
+        abstract member Accept :IVisitor<'T> -> 'T
 
     and Binary(left, operator, right) as this =
-        inherit Expr()
-        let left: Expr = left
-        let literal: Token = operator
-        let right: Expr = right
-        member __.Accept (visitor: IVisitor<'T>) = visitor.VisitBinaryExpr(this)
+        member __.left: IExpr = left
+        member __.operator: Token = operator
+        member __.right: IExpr = right
+        interface IExpr with
+            member __.Accept (visitor: IVisitor<'T>) = visitor.VisitBinaryExpr(this)
 
     and Grouping(expression) as this =
-        inherit Expr()
-        let expression: Expr = expression
-        member __.Accept (visitor: IVisitor<'T>) = visitor.VisitGroupingExpr(this)
+        member __.expression: IExpr = expression
+        interface IExpr with
+            member __.Accept (visitor: IVisitor<'T>) = visitor.VisitGroupingExpr(this)
 
     and Literal(value: obj) as this =
-        inherit Expr()
-        let value: obj = value
-        member __.Accept (visitor: IVisitor<'T>) = visitor.VisitLiteralExpr(this)
+        member __.value: obj = value
+        interface IExpr with
+            member __.Accept (visitor: IVisitor<'T>) = visitor.VisitLiteralExpr(this)
 
     and Unary(operator, right) as this =
-        inherit Expr()
-        let operator: Token = operator
-        let right: Expr = right
-        member __.Accept (visitor: IVisitor<'T>) = visitor.VisitUnaryExpr(this)
+        member __.operator: Token = operator
+        member __.right: IExpr = right
+        interface IExpr with
+            member __.Accept (visitor: IVisitor<'T>) = visitor.VisitUnaryExpr(this)
