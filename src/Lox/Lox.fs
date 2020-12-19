@@ -6,6 +6,7 @@ open Token
 open TokenType
 open Scanner
 open Error
+open AstPrinter
 
 module LoxFs =
     [<EntryPoint>]
@@ -40,10 +41,15 @@ module LoxFs =
             errorHandler.SetError false
             runPrompt code
 
+        let astPrintTest () =
+            let x = AstPrinter()
+            printf "%s" <| x.print(x.testExpr ())
+
         let exitCode = 64
 
         match argv.Length with
         | 3 -> usage exitCode
         | 2 -> runFile argv.[0]
+        | 1 -> astPrintTest ()
         | _ -> runPrompt exitCode
         0 // return an integer exit code
