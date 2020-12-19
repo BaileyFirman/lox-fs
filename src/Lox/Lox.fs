@@ -2,8 +2,6 @@ namespace LoxFs
 
 open System
 open System.IO
-open Token
-open TokenType
 open Scanner
 open Error
 open AstPrinter
@@ -43,7 +41,7 @@ module LoxFs =
 
         let astPrintTest () =
             let x = AstPrinter()
-            printf "%s" <| x.print(x.testExpr ())
+            printf "%s" <| x.print (x.testExpr ())
 
         let exitCode = 64
 
