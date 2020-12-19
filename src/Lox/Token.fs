@@ -11,4 +11,4 @@ module Token =
 
         override this.ToString() =
             let tokenTypeString = tokenType.ToString()
-            sprintf "%s %s" tokenTypeString lexeme
+            $"{tokenTypeString} {lexeme}"
