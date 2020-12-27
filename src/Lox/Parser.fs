@@ -72,3 +72,24 @@ module Parser =
 
             innerComparison ()
             expr
+
+        let equality () =
+            let mutable expr = comparison ()
+
+            let matchTokens =
+                [|
+                    BANGEQUAL
+                    EQUALEQUAL
+                |]
+
+            let rec innerEquality () =
+                match matchToken matchTokens with
+                | true -> 
+                    let operator = previous ()
+                    let right = comparison ()
+                    expr <- Binary(expr, operator, right)
+                    innerEquality ()
+                | false -> ()
+
+            innerEquality ()
+            expr
