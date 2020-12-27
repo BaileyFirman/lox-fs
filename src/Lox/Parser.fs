@@ -35,6 +35,11 @@ module Parser =
 
         let rec expression () = equality () :> IExpr
 
+        and consume tokenType message =
+            if check tokenType
+            then advance () |> ignore
+            else ()
+
         and primary (): IExpr =
             match matchToken [| FALSE |] with
             | true -> Literal(false) :> IExpr
@@ -51,7 +56,7 @@ module Parser =
                             match matchToken [| LEFTPAREN |] with
                             | true ->
                                 let expr = expression ()
-                                //consume RIGHTPAREN "Expect ')' after expression."
+                                consume RIGHTPAREN "Expect ')' after expression."
                                 Grouping(expr) :> IExpr
                             | false -> Literal("<ERROR>") :> IExpr
 
@@ -139,3 +144,8 @@ module Parser =
 
             innerEquality ()
             expr
+        
+        and parse () =
+            expression ()
+
+        member __.Start () = parse ()
