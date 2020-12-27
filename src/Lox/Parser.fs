@@ -33,7 +33,29 @@ module Parser =
             |> ignore
             false
 
-        let factor (): IExpr = Literal("FACTOR") :> IExpr
+        let rec unary () =
+            let matchTokens = [| BANG; MINUS |]
+            match matchToken matchTokens with
+            | true ->
+                let operator = previous ()
+                let right = unary ()
+                Unary(operator, right)
+            | false -> primary ()
+
+        let factor (): IExpr =
+            let mutable expr = unary ()
+
+            let matchTokens = [| SLASH; STAR |]
+            let rec innerFactor () =
+                match matchToken matchTokens with
+                | true ->
+                    let operator = previous ()
+                    let right = unary ()
+                    expr <- Binary(expr, operator, right)
+                | false -> ()
+
+            innerFactor ()
+            expr :> IExpr
 
         let term (): IExpr =
             let mutable expr = factor ()
