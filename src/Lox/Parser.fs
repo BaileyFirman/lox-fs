@@ -33,19 +33,47 @@ module Parser =
             |> ignore
             false
 
-        let rec unary () =
-            let matchTokens = [| BANG; MINUS |]
-            match matchToken matchTokens with
-            | true ->
-                let operator = previous ()
-                let right = unary ()
-                Unary(operator, right)
-            | false -> primary ()
+        let rec expression () = equality () :> IExpr
 
-        let factor (): IExpr =
+        and primary (): IExpr =
+            match matchToken [| FALSE |] with
+            | true -> Literal(false) :> IExpr
+            | false ->
+                match matchToken [| TRUE |] with
+                | true -> Literal(true) :> IExpr
+                | false ->
+                    match matchToken [| NIL |] with
+                    | true -> Literal(null) :> IExpr
+                    | false ->
+                        match matchToken [| NUMBER; STRING |] with
+                        | true -> Literal(previous().literal) :> IExpr
+                        | false ->
+                            match matchToken [| LEFTPAREN |] with
+                            | true ->
+                                let expr = expression ()
+                                //consume RIGHTPAREN "Expect ')' after expression."
+                                Grouping(expr) :> IExpr
+                            | false -> Literal("<ERROR>") :> IExpr
+
+        and unary () =
+            let matchTokens = [| BANG; MINUS |]
+
+            let rec innerUnary () =
+                match matchToken matchTokens with
+                | true ->
+                    let operator = previous ()
+                    let right = innerUnary ()
+                    Unary(operator, right) :> IExpr
+                | false -> primary ()
+
+            innerUnary ()
+
+
+        and factor (): IExpr =
             let mutable expr = unary ()
 
             let matchTokens = [| SLASH; STAR |]
+
             let rec innerFactor () =
                 match matchToken matchTokens with
                 | true ->
@@ -55,9 +83,9 @@ module Parser =
                 | false -> ()
 
             innerFactor ()
-            expr :> IExpr
+            expr
 
-        let term (): IExpr =
+        and term (): IExpr =
             let mutable expr = factor ()
             let matchTokens = [| MINUS; PLUS |]
 
@@ -74,7 +102,7 @@ module Parser =
             expr
 
 
-        let comparison (): IExpr =
+        and comparison (): IExpr =
             let mutable expr = term ()
 
             let matchTokens =
@@ -95,18 +123,14 @@ module Parser =
             innerComparison ()
             expr
 
-        let equality () =
+        and equality () =
             let mutable expr = comparison ()
 
-            let matchTokens =
-                [|
-                    BANGEQUAL
-                    EQUALEQUAL
-                |]
+            let matchTokens = [| BANGEQUAL; EQUALEQUAL |]
 
             let rec innerEquality () =
                 match matchToken matchTokens with
-                | true -> 
+                | true ->
                     let operator = previous ()
                     let right = comparison ()
                     expr <- Binary(expr, operator, right)
