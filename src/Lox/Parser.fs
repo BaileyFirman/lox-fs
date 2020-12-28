@@ -33,6 +33,14 @@ module Parser =
             |> ignore
             false
 
+        let report line at message =
+            $"{line}{at}{message}"
+
+        let error (token: Token) message =
+            if token.tokenType = EOF
+            then report token.line " at end" message
+            else report token.line " at " $"{token.lexeme}'{message}"
+
         let rec expression () = equality () :> IExpr
 
         and consume tokenType message =
