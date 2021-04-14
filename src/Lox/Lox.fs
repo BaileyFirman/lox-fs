@@ -20,7 +20,7 @@ module LoxFs =
             let scanner = Scanner(source, errorHandler)
             let tokens = scanner.ScanTokens
             let parser = Parser(tokens |> List.toArray)
-            printfn "%s" <| tokens.ToString()
+            printfn $"{tokens}"
             let expression = parser.Start()
             let x = AstPrinter()
             printf "%s" <| x.print (expression)

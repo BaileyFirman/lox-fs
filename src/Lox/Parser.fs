@@ -42,9 +42,8 @@ module Parser =
                 | true -> advanceToken ()
                 | false -> matchToken tokens.[1..]
 
-
-
-        let report line at message = $"{line}{at}{message}"
+        let report line at message =
+            failwith $"{line}{at}{message}"
 
         let error (token: Token) message =
             if token.tokenType = EOF then
@@ -53,11 +52,13 @@ module Parser =
                 report token.line " at " $"{token.lexeme}'{message}"
 
         let rec expression () = equality () :> IExpr
-        and consume tokenType message =
+        and consume tokenType (message: string): Token =
             if check tokenType then
-                advance () |> ignore
+                advance ()
             else
-                ()
+                let next = peek ()
+                error next message
+                next
         and primary () : IExpr =
             match matchToken [| FALSE |] with
             | true -> Literal(false) :> IExpr
@@ -74,7 +75,7 @@ module Parser =
                             match matchToken [| LEFTPAREN |] with
                             | true ->
                                 let expr = expression ()
-                                consume RIGHTPAREN "Expect ')' after expression."
+                                consume RIGHTPAREN "Expect ')' after expression." |> ignore
                                 Grouping(expr) :> IExpr
                             | false -> Literal("<ERROR>") :> IExpr
         and unary () =
