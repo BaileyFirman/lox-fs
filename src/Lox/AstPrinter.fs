@@ -18,6 +18,7 @@ module AstPrinter =
             |> String.Concat
 
         member __.testExpr() =
+            // Binary(Unary((Token(MINUS, "-", (), 1)), (Literal 123)), Token(STAR, "*", (), 1), Grouping(Literal(45.67)))
             Binary(Unary((Token(MINUS, "-", (), 1)), (Literal 123)), Token(STAR, "*", (), 1), Grouping(Literal(45.67)))
 
         member __.print(expr: IExpr) = expr.Accept(this)

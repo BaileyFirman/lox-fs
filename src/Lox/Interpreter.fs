@@ -21,7 +21,18 @@ module Interpreter =
             |> String.Concat
 
         member __.testExpr() =
-            Binary(Unary((Token(MINUS, "-", (), 1)), (Literal 123)), Token(STAR, "*", (), 1), Grouping(Literal(45.67)))
+            // Binary(Unary((Token(MINUS, "-", (), 1)), (Literal 123)), Token(STAR, "*", (), 1), Grouping(Literal(45.67)))
+            Binary(
+                (
+                    Literal 123.0
+                ),
+                Token(
+                    STAR, "*", (), 1
+                ),
+                (
+                    Literal 123.0
+                )
+            )
 
         member __.print(expr: IExpr) = expr.Accept(this)
 
@@ -33,6 +44,10 @@ module Interpreter =
 
         member __.isEqual left right =
             left = right
+
+        member __.Interpret expression =
+            let value = __.evaluate expression
+            printfn $"{value.ToString()}"
 
         interface IVisitor<obj> with
             member __.VisitBinaryExpr(expr: Binary): obj =

@@ -6,6 +6,7 @@ open Scanner
 open Error
 open AstPrinter
 open Parser
+open Interpreter
 
 module LoxFs =
     [<EntryPoint>]
@@ -22,8 +23,10 @@ module LoxFs =
             let parser = Parser(tokens |> List.toArray)
             printfn $"{tokens}"
             let expression = parser.Start()
-            let x = AstPrinter()
-            printf "%s" <| x.print (expression)
+            let i = Interpreter() 
+            i.Interpret expression
+            // let x = AstPrinter()
+            // printf "%s" <| x.print (expression)
 
         let runFile path =
             let file = File.ReadAllText path
@@ -45,8 +48,12 @@ module LoxFs =
             runPrompt code
 
         let astPrintTest () =
-            let x = AstPrinter()
-            printf "%s" <| x.print (x.testExpr ())
+            let x = Interpreter()
+            let z = AstPrinter()
+            printf "%s" <| z.print (x.testExpr ())
+            
+            x.Interpret (x.testExpr ())
+
 
         let exitCode = 64
 
