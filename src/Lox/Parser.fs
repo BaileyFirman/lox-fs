@@ -6,7 +6,7 @@ open Expr
 
 module Parser =
     type Parser(tokens) =
-        let tokens: Token [] = tokens
+        let tokens : Token [] = tokens
         let mutable current = 0
 
         let peek () = tokens.[current]
@@ -17,38 +17,49 @@ module Parser =
 
         let advance () =
             let atEnd = isAtEnd ()
-            if not atEnd then current <- current + 1 else ()
+
+            if not atEnd then
+                current <- current + 1
+            else
+                ()
+
             previous ()
 
         let check tokenType =
-            if isAtEnd () then false else peek().tokenType = tokenType
+            if isAtEnd () then
+                false
+            else
+                peek().tokenType = tokenType
 
-        let rec matchToken (tokens: TokenType []): bool =
-            let head = tokens.[0]
-            match check head with
-            | true ->
+        let rec matchToken (tokens: TokenType []) : bool =
+            let advanceToken () =
                 advance () |> ignore
                 true
-            | false -> matchToken tokens.[1..]
-            |> ignore
-            false
 
-        let report line at message =
-            $"{line}{at}{message}"
+            match tokens.Length with
+            | 0 -> false
+            | _ ->
+                match check tokens.[0] with
+                | true -> advanceToken ()
+                | false -> matchToken tokens.[1..]
+
+
+
+        let report line at message = $"{line}{at}{message}"
 
         let error (token: Token) message =
-            if token.tokenType = EOF
-            then report token.line " at end" message
-            else report token.line " at " $"{token.lexeme}'{message}"
+            if token.tokenType = EOF then
+                report token.line " at end" message
+            else
+                report token.line " at " $"{token.lexeme}'{message}"
 
         let rec expression () = equality () :> IExpr
-
         and consume tokenType message =
-            if check tokenType
-            then advance () |> ignore
-            else ()
-
-        and primary (): IExpr =
+            if check tokenType then
+                advance () |> ignore
+            else
+                ()
+        and primary () : IExpr =
             match matchToken [| FALSE |] with
             | true -> Literal(false) :> IExpr
             | false ->
@@ -67,7 +78,6 @@ module Parser =
                                 consume RIGHTPAREN "Expect ')' after expression."
                                 Grouping(expr) :> IExpr
                             | false -> Literal("<ERROR>") :> IExpr
-
         and unary () =
             let matchTokens = [| BANG; MINUS |]
 
@@ -80,9 +90,7 @@ module Parser =
                 | false -> primary ()
 
             innerUnary ()
-
-
-        and factor (): IExpr =
+        and factor () : IExpr =
             let mutable expr = unary ()
 
             let matchTokens = [| SLASH; STAR |]
@@ -97,12 +105,11 @@ module Parser =
 
             innerFactor ()
             expr
-
-        and term (): IExpr =
+        and term () : IExpr =
             let mutable expr = factor ()
             let matchTokens = [| MINUS; PLUS |]
 
-            let rec innerTerm (): unit =
+            let rec innerTerm () : unit =
                 match matchToken matchTokens with
                 | true ->
                     let operator = previous ()
@@ -113,9 +120,7 @@ module Parser =
 
             innerTerm ()
             expr
-
-
-        and comparison (): IExpr =
+        and comparison () : IExpr =
             let mutable expr = term ()
 
             let matchTokens =
@@ -124,7 +129,7 @@ module Parser =
                    LESS
                    LESSEQUAL |]
 
-            let rec innerComparison (): unit =
+            let rec innerComparison () : unit =
                 match matchToken matchTokens with
                 | true ->
                     let operator = previous ()
@@ -135,25 +140,15 @@ module Parser =
 
             innerComparison ()
             expr
-
         and equality () =
             let mutable expr = comparison ()
 
-            let matchTokens = [| BANGEQUAL; EQUALEQUAL |]
+            while matchToken [| BANGEQUAL; EQUALEQUAL |] do
+                let operator = previous ()
+                let right = comparison ()
+                expr <- Binary(expr, operator, right)
 
-            let rec innerEquality () =
-                match matchToken matchTokens with
-                | true ->
-                    let operator = previous ()
-                    let right = comparison ()
-                    expr <- Binary(expr, operator, right)
-                    innerEquality ()
-                | false -> ()
-
-            innerEquality ()
             expr
-        
-        and parse () =
-            expression ()
+        and parse () = expression ()
 
-        member __.Start () = parse ()
+        member __.Start() = parse ()
