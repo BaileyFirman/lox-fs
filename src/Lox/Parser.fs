@@ -10,18 +10,17 @@ module Parser =
         let mutable current = 0
 
         let peek () = tokens.[current]
-
         let previous () = tokens.[current - 1]
-
         let isAtEnd () = peek().tokenType = EOF
 
         let advance () =
             let atEnd = isAtEnd ()
 
-            if not atEnd then
-                current <- current + 1
-            else
-                ()
+            current <-
+                if not atEnd then
+                    current + 1
+                else
+                    current
 
             previous ()
 
@@ -81,46 +80,34 @@ module Parser =
         and unary () =
             let matchTokens = [| BANG; MINUS |]
 
-            let rec innerUnary () =
-                match matchToken matchTokens with
-                | true ->
-                    let operator = previous ()
-                    let right = innerUnary ()
-                    Unary(operator, right) :> IExpr
-                | false -> primary ()
-
-            innerUnary ()
-        and factor () : IExpr =
+            if matchToken matchTokens then
+                let operator = previous ()
+                let right = unary ()
+                Unary(operator, right) :> IExpr
+            else
+                primary ()
+        and factor () =
             let mutable expr = unary ()
 
             let matchTokens = [| SLASH; STAR |]
 
-            let rec innerFactor () =
-                match matchToken matchTokens with
-                | true ->
-                    let operator = previous ()
-                    let right = unary ()
-                    expr <- Binary(expr, operator, right)
-                | false -> ()
+            while matchToken matchTokens do
+                let operator = previous ()
+                let right = unary ()
+                expr <- Binary(expr, operator, right)
 
-            innerFactor ()
             expr
-        and term () : IExpr =
+        and term () =
             let mutable expr = factor ()
             let matchTokens = [| MINUS; PLUS |]
 
-            let rec innerTerm () : unit =
-                match matchToken matchTokens with
-                | true ->
-                    let operator = previous ()
-                    let right = factor ()
-                    expr <- Binary(expr, operator, right)
-                    innerTerm ()
-                | false -> ()
+            while matchToken matchTokens do
+                let operator = previous ()
+                let right = factor ()
+                expr <- Binary(expr, operator, right)
 
-            innerTerm ()
             expr
-        and comparison () : IExpr =
+        and comparison () =
             let mutable expr = term ()
 
             let matchTokens =
@@ -129,16 +116,11 @@ module Parser =
                    LESS
                    LESSEQUAL |]
 
-            let rec innerComparison () : unit =
-                match matchToken matchTokens with
-                | true ->
-                    let operator = previous ()
-                    let right = term ()
-                    expr <- Binary(expr, operator, right)
-                    innerComparison ()
-                | false -> ()
+            while matchToken matchTokens do
+                let operator = previous ()
+                let right = term ()
+                expr <- Binary(expr, operator, right)
 
-            innerComparison ()
             expr
         and equality () =
             let mutable expr = comparison ()
