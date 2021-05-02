@@ -1,6 +1,5 @@
 namespace LoxFs
 
-open Token
 open TokenType
 open Expr
 open Microsoft.FSharp.Core

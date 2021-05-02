@@ -16,7 +16,7 @@ module Scanner =
 
         member __.IsAtEnd = current >= source.Length
 
-        member __.Advance() =
+        member __.Advance =
             current <- current + 1
             source.[current - 1]
 
@@ -32,28 +32,28 @@ module Scanner =
                 current <- current + 1
                 true
 
-        member __.Peek() =
+        member __.Peek =
             match __.IsAtEnd with
             | true -> '\u0004'
             | false -> source.[current]
 
-        member __.PeekNext() =
+        member __.PeekNext =
             let next = current + 1
 
             match next >= source.Length with
             | true -> '\u0004'
             | false -> source.[next]
 
-        member __.ScanToken() =
-            let c = __.Advance()
+        member __.ScanToken =
+            let c = __.Advance
 
             let matchEqual t f = if __.MatchChar '=' then t else f
 
             let matchDivision () =
                 let rec comment () =
-                    match __.Peek() <> '\n' && (not __.IsAtEnd) with
+                    match __.Peek <> '\n' && (not __.IsAtEnd) with
                     | true ->
-                        __.Advance() |> ignore
+                        __.Advance |> ignore
                         comment ()
                     | false -> COMMENT
 
@@ -64,13 +64,13 @@ module Scanner =
 
             let matchString () =
                 let rec string () =
-                    match __.Peek() <> '"' && (not __.IsAtEnd) with
+                    match __.Peek <> '"' && (not __.IsAtEnd) with
                     | true ->
-                        match __.Peek() = '\n' with
+                        match __.Peek = '\n' with
                         | true -> line <- line + 1
                         | false -> ()
 
-                        __.Advance() |> ignore
+                        __.Advance |> ignore
                         string ()
                     | false -> ()
 
@@ -81,7 +81,7 @@ module Scanner =
                     errorHandler.Error line "Unterminated String."
                     ()
                 | false ->
-                    __.Advance() |> ignore
+                    __.Advance |> ignore
                     ()
 
                 let value = source.[(start + 1)..(current - 1)]
@@ -99,22 +99,22 @@ module Scanner =
 
             let matchNumber () =
                 let rec number () =
-                    let next = __.Peek()
+                    let next = __.Peek
 
                     match Char.IsDigit next with
                     | true ->
-                        __.Advance() |> ignore
+                        __.Advance |> ignore
                         number ()
                     | false -> ()
 
                 number ()
 
-                let next = __.Peek()
-                let nextIsDigit = Char.IsDigit <| __.PeekNext()
+                let next = __.Peek
+                let nextIsDigit = Char.IsDigit <| __.PeekNext
 
                 match next = '.' && nextIsDigit with
                 | true ->
-                    __.Advance() |> ignore
+                    __.Advance |> ignore
                     number ()
                 | false -> ()
 
@@ -129,8 +129,8 @@ module Scanner =
 
             let matchIdentifier () =
                 let rec identifier () =
-                    if isAlphaNumeric <| __.Peek() then
-                        __.Advance() |> ignore
+                    if isAlphaNumeric <| __.Peek then
+                        __.Advance |> ignore
                         identifier ()
                     else
                         ()
@@ -199,20 +199,8 @@ module Scanner =
             | _ -> __.AddToken tokenType tokenType
 
         member __.ScanTokens : seq<Token> =
-            // let rec scanLoop () =
-            //     match __.IsAtEnd with
-            //     | true -> ()
-            //     | false ->
-            //         start <- current
-            //         __.ScanToken()
-            //         scanLoop ()
-
-            // scanLoop ()
-
             while not (__.IsAtEnd) do
                 start <- current
-                __.ScanToken()
+                __.ScanToken
 
-            tokens <- tokens @ [ Token(EOF, "", null, 0) ]
-
-            tokens |> List.toSeq
+            tokens @ [ Token(EOF, "", null, 0) ] |> List.toSeq
