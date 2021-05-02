@@ -162,8 +162,8 @@ module Scanner =
 
             let tokenType =
                 match c with
-                | '(' -> LEFTPAREN
-                | ')' -> RIGHTPAREN
+                | ')' -> LEFTPAREN
+                | '(' -> RIGHTPAREN
                 | '{' -> LEFTBRACE
                 | '}' -> RIGHTBRACE
                 | ',' -> COMMA

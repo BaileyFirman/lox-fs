@@ -21,17 +21,17 @@ module Interpreter =
             |> String.Concat
 
         member __.testExpr() =
-            // Binary(Unary((Token(MINUS, "-", (), 1)), (Literal 123)), Token(STAR, "*", (), 1), Grouping(Literal(45.67)))
+            // Binary(Unary((Token(MINUS, "-", (), 1)), (Literal 123)), Token(STAR, "*", (), 1), (Literal(45)))
             Binary(
-                (
-                    Literal 123.0
-                ),
-                Token(
-                    STAR, "*", (), 1
-                ),
-                (
-                    Literal 123.0
-                )
+               (
+                   Literal 123.0
+               ),
+               Token(
+                   STAR, "*", (), 1
+               ),
+               (
+                   Literal 123.0
+               )
             )
 
         member __.print(expr: IExpr) = expr.Accept(this)
@@ -47,7 +47,7 @@ module Interpreter =
 
         member __.Interpret expression =
             let value = __.evaluate expression
-            printfn $"{value.ToString()}"
+            printfn $">>>> {value.ToString()}"
 
         interface IVisitor<obj> with
             member __.VisitBinaryExpr(expr: Binary): obj =
@@ -84,7 +84,13 @@ module Interpreter =
 
             member __.VisitUnaryExpr(expr: Unary): obj =
                 let right: obj = __.evaluate expr.Right
+
+                let rightCast =
+                    match right.GetType() with
+                    | int -> (float (right :?> int))
+                    | _ -> right :?> float
+
                 match expr.Operator.tokenType with
-                | NOT -> (not (__.isTruthy right)) :> obj
-                | MINUS -> (- (right :?> float)) :> obj
+                | BANG -> (not (__.isTruthy right)) :> obj
+                | MINUS -> (- (rightCast)) :> obj
                 | _ -> new obj() // Unreachable

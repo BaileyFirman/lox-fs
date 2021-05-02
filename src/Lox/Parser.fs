@@ -14,36 +14,33 @@ module Parser =
         let isAtEnd () = peek().tokenType = EOF
 
         let advance () =
-            let atEnd = isAtEnd ()
+            let offset = 
+                match peek().tokenType with
+                | EOF -> current
+                | _ -> current + 1
 
-            current <-
-                if not atEnd then
-                    current + 1
-                else
-                    current
-
+            current <- offset
             previous ()
 
         let check tokenType =
+            let next = peek()
+
             if isAtEnd () then
                 false
             else
-                peek().tokenType = tokenType
+                next.tokenType = tokenType
 
         let rec matchToken (tokens: TokenType []) : bool =
-            let advanceToken () =
+            let existsMatch =
+                tokens |> Array.exists (fun x -> check x)
+
+            if existsMatch then
                 advance () |> ignore
                 true
+            else
+                false
 
-            match tokens.Length with
-            | 0 -> false
-            | _ ->
-                match check tokens.[0] with
-                | true -> advanceToken ()
-                | false -> matchToken tokens.[1..]
-
-        let report line at message =
-            failwith $"{line}{at}{message}"
+        let report line at message = failwith $"{line}{at}{message}"
 
         let error (token: Token) message =
             if token.tokenType = EOF then
@@ -52,7 +49,7 @@ module Parser =
                 report token.line " at " $"{token.lexeme}'{message}"
 
         let rec expression () = equality () :> IExpr
-        and consume tokenType (message: string): Token =
+        and consume tokenType (message: string) : Token =
             if check tokenType then
                 advance ()
             else
@@ -60,24 +57,35 @@ module Parser =
                 error next message
                 next
         and primary () : IExpr =
-            match matchToken [| FALSE |] with
-            | true -> Literal(false) :> IExpr
-            | false ->
-                match matchToken [| TRUE |] with
-                | true -> Literal(true) :> IExpr
-                | false ->
-                    match matchToken [| NIL |] with
-                    | true -> Literal(null) :> IExpr
-                    | false ->
-                        match matchToken [| NUMBER; STRING |] with
-                        | true -> Literal(previous().literal) :> IExpr
-                        | false ->
-                            match matchToken [| LEFTPAREN |] with
-                            | true ->
-                                let expr = expression ()
-                                consume RIGHTPAREN "Expect ')' after expression." |> ignore
-                                Grouping(expr) :> IExpr
-                            | false -> Literal("<ERROR>") :> IExpr
+            // printfn "HIT PRIMARY"
+            let mutable ret: IExpr = Literal(false) :> IExpr
+
+            if matchToken [| FALSE |]
+            then ret <- Literal(false) :> IExpr
+            else ()
+
+            if matchToken [| TRUE |]
+            then ret <- Literal(true) :> IExpr
+            else ()
+
+            if matchToken [| NIL |]
+            then ret <- Literal(null) :> IExpr
+            else ()
+
+            if matchToken [| NUMBER; STRING |]
+            then ret <- Literal(previous().literal) :> IExpr
+            else ()
+
+            if matchToken [| LEFTPAREN |]
+            then
+                let expr = expression ()
+                consume RIGHTPAREN "Expect ')' after expression."
+                |> ignore
+                ret <- Grouping(expr) :> IExpr
+            else ()
+
+            ret
+
         and unary () =
             let matchTokens = [| BANG; MINUS |]
 
@@ -120,7 +128,7 @@ module Parser =
             while matchToken matchTokens do
                 let operator = previous ()
                 let right = term ()
-                expr <- Binary(expr, operator, right)
+                expr <- new Binary(expr, operator, right)
 
             expr
         and equality () =
@@ -132,6 +140,9 @@ module Parser =
                 expr <- Binary(expr, operator, right)
 
             expr
-        and parse () = expression ()
+        and parse () =
+            // tokens
+            // |> Seq.iter(fun x -> printfn $"{x.lexeme} {x.line} {x.literal} {x.tokenType}")
+            expression ()
 
         member __.Start() = parse ()

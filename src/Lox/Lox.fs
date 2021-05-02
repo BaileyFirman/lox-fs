@@ -21,11 +21,15 @@ module LoxFs =
             let scanner = Scanner(source, errorHandler)
             let tokens = scanner.ScanTokens
             let parser = Parser(tokens |> List.toArray)
-            printfn $"{tokens}"
+            // printfn $"{tokens}"
             let expression = parser.Start()
             let i = Interpreter() 
             i.Interpret expression
-            // let x = AstPrinter()
+            let z = AstPrinter()
+            let p = z.print expression
+            printfn $"{p}"
+            ()
+            //printf "%s" <| z.print (x.testExpr ())
             // printf "%s" <| x.print (expression)
 
         let runFile path =
@@ -54,12 +58,28 @@ module LoxFs =
             
             x.Interpret (x.testExpr ())
 
+        let runX source: string =
+            let scanner = Scanner(source, errorHandler)
+            let tokens =
+                scanner.ScanTokens
+                |> List.toArray
 
+            let parser = Parser(tokens)
+            let expression = parser.Start()
+            let astPrinter = AstPrinter()
+            let interpreter = Interpreter()
+
+            printfn $"{astPrinter.print (expression)}"
+            interpreter.Interpret (expression)
+            ""
         let exitCode = 64
 
-        match argv.Length with
-        | 3 -> usage exitCode
-        | 2 -> runFile argv.[0]
-        | 1 -> astPrintTest ()
-        | _ -> runFile "test.lox"
+        let res = runX "4 * 5 * 6 * 7 / 8"
+        printfn $"{res}"
+
+        // match argv.Length with
+        // | 3 -> usage exitCode
+        // | 2 -> runFile argv.[0]
+        // | 1 -> astPrintTest ()
+        // | _ -> runFile "test.lox"
         0 // return an integer exit code
