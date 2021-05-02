@@ -61,15 +61,16 @@ module Interpreter =
             member __.VisitLiteralExpr(expr: Literal) = expr.Value
 
             member __.VisitUnaryExpr(expr: Unary) : obj =
-                let right : obj = __.evaluate expr.Right
+                let rightObj : obj = __.evaluate expr.Right
 
-                let rightAsFloat =
-                    match right.GetType() with
+                let right =
                     // We can't implicitly take an obj with the underlying type int and autocast AFAIK
-                    | int -> (float (right :?> int))
-                    | _ -> right :?> float
+                    if (rightObj.GetType() = int.GetType()) then
+                        (float (rightObj :?> int))
+                    else
+                        rightObj :?> float
 
                 match expr.Operator.tokenType with
                 | BANG -> (not (__.isTruthy right)) :> obj
-                | MINUS -> (-(rightAsFloat)) :> obj
+                | MINUS -> (-(right)) :> obj
                 | _ -> new obj () // Unreachable
