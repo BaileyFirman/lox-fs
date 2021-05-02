@@ -5,8 +5,9 @@ open TokenType
 open Expr
 
 module Parser =
-    type Parser(tokens) =
-        let tokens : Token [] = tokens
+    type Parser(tokens: seq<Token>) =
+        let tokens : Token [] = tokens |> Seq.toArray
+
         let mutable current = 0
 
         let peek () = tokens.[current]
@@ -14,16 +15,17 @@ module Parser =
         let isAtEnd () = peek().tokenType = EOF
 
         let advance () =
-            let offset = 
-                match peek().tokenType with
-                | EOF -> current
-                | _ -> current + 1
+            let offset =
+                if peek().tokenType = EOF then
+                    current
+                else
+                    current + 1
 
             current <- offset
             previous ()
 
         let check tokenType =
-            let next = peek()
+            let next = peek ()
 
             if isAtEnd () then
                 false
@@ -57,35 +59,39 @@ module Parser =
                 error next message
                 next
         and primary () : IExpr =
-            // printfn "HIT PRIMARY"
-            let mutable ret: IExpr = Literal(false) :> IExpr
+            let mutable ret : IExpr = Literal(false) :> IExpr
 
-            if matchToken [| FALSE |]
-            then ret <- Literal(false) :> IExpr
-            else ()
+            if matchToken [| FALSE |] then
+                ret <- Literal(false) :> IExpr
+            else
+                ()
 
-            if matchToken [| TRUE |]
-            then ret <- Literal(true) :> IExpr
-            else ()
+            if matchToken [| TRUE |] then
+                ret <- Literal(true) :> IExpr
+            else
+                ()
 
-            if matchToken [| NIL |]
-            then ret <- Literal(null) :> IExpr
-            else ()
+            if matchToken [| NIL |] then
+                ret <- Literal(null) :> IExpr
+            else
+                ()
 
-            if matchToken [| NUMBER; STRING |]
-            then ret <- Literal(previous().literal) :> IExpr
-            else ()
+            if matchToken [| NUMBER; STRING |] then
+                ret <- Literal(previous().literal) :> IExpr
+            else
+                ()
 
-            if matchToken [| LEFTPAREN |]
-            then
+            if matchToken [| LEFTPAREN |] then
                 let expr = expression ()
+
                 consume RIGHTPAREN "Expect ')' after expression."
                 |> ignore
+
                 ret <- Grouping(expr) :> IExpr
-            else ()
+            else
+                ()
 
             ret
-
         and unary () =
             let matchTokens = [| BANG; MINUS |]
 

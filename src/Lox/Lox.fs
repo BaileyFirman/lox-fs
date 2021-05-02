@@ -20,66 +20,40 @@ module LoxFs =
         let run source =
             let scanner = Scanner(source, errorHandler)
             let tokens = scanner.ScanTokens
-            let parser = Parser(tokens |> List.toArray)
-            // printfn $"{tokens}"
+
+            let parser = Parser(tokens)
             let expression = parser.Start()
-            let i = Interpreter() 
-            i.Interpret expression
-            let z = AstPrinter()
-            let p = z.print expression
-            printfn $"{p}"
-            ()
-            //printf "%s" <| z.print (x.testExpr ())
-            // printf "%s" <| x.print (expression)
+
+            let astPrinter = AstPrinter()
+            let interpreter = Interpreter()
+
+            let astString = astPrinter.print expression
+            let returnValue = interpreter.Interpret expression
+
+            printfn $"{astString} -> {returnValue}"
 
         let runFile path =
             let file = File.ReadAllText path
+
             match errorHandler.HadError with
             | true -> Environment.Exit 65
             | false -> run file
-            
+
 
         let rec runPrompt code =
             printf "> "
             let line = Console.ReadLine()
-            let scanner = Scanner(line, errorHandler)
-            let tokens = scanner.ScanTokens
-            tokens
-            |> Seq.iter (fun x -> printfn "%s" <| x.ToString())
-            |> ignore
-            printfn ""
+            
+            run line
+
             errorHandler.SetError false
             runPrompt code
 
-        let astPrintTest () =
-            let x = Interpreter()
-            let z = AstPrinter()
-            printf "%s" <| z.print (x.testExpr ())
-            
-            x.Interpret (x.testExpr ())
-
-        let runX source: string =
-            let scanner = Scanner(source, errorHandler)
-            let tokens =
-                scanner.ScanTokens
-                |> List.toArray
-
-            let parser = Parser(tokens)
-            let expression = parser.Start()
-            let astPrinter = AstPrinter()
-            let interpreter = Interpreter()
-
-            printfn $"{astPrinter.print (expression)}"
-            interpreter.Interpret (expression)
-            ""
         let exitCode = 64
 
-        let res = runX "4 * 5 * 6 * 7 / 8"
-        printfn $"{res}"
+        match argv.Length with
+        | 2 -> usage exitCode
+        | 1 -> runPrompt ""
+        | _ -> runFile "test.lox"
 
-        // match argv.Length with
-        // | 3 -> usage exitCode
-        // | 2 -> runFile argv.[0]
-        // | 1 -> astPrintTest ()
-        // | _ -> runFile "test.lox"
-        0 // return an integer exit code
+        0

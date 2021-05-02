@@ -1,16 +1,15 @@
 namespace LoxFs
 
 open System
-open System.IO
 open Token
 open TokenType
 open Error
 
 module Scanner =
     type Scanner(source, errorHandler) =
-        let errorHandler: ErrorHandler = errorHandler
-        let source: string = source
-        let mutable tokens: List<Token> = []
+        let errorHandler : ErrorHandler = errorHandler
+        let source : string = source
+        let mutable tokens : List<Token> = []
         let mutable start = 0
         let mutable current = 0
         let mutable line = 1
@@ -40,6 +39,7 @@ module Scanner =
 
         member __.PeekNext() =
             let next = current + 1
+
             match next >= source.Length with
             | true -> '\u0004'
             | false -> source.[next]
@@ -57,7 +57,10 @@ module Scanner =
                         comment ()
                     | false -> COMMENT
 
-                if __.MatchChar '/' then comment () else SLASH
+                if __.MatchChar '/' then
+                    comment ()
+                else
+                    SLASH
 
             let matchString () =
                 let rec string () =
@@ -66,6 +69,7 @@ module Scanner =
                         match __.Peek() = '\n' with
                         | true -> line <- line + 1
                         | false -> ()
+
                         __.Advance() |> ignore
                         string ()
                     | false -> ()
@@ -96,6 +100,7 @@ module Scanner =
             let matchNumber () =
                 let rec number () =
                     let next = __.Peek()
+
                     match Char.IsDigit next with
                     | true ->
                         __.Advance() |> ignore
@@ -106,6 +111,7 @@ module Scanner =
 
                 let next = __.Peek()
                 let nextIsDigit = Char.IsDigit <| __.PeekNext()
+
                 match next = '.' && nextIsDigit with
                 | true ->
                     __.Advance() |> ignore
@@ -162,8 +168,8 @@ module Scanner =
 
             let tokenType =
                 match c with
-                | ')' -> LEFTPAREN
-                | '(' -> RIGHTPAREN
+                | '(' -> LEFTPAREN
+                | ')' -> RIGHTPAREN
                 | '{' -> LEFTBRACE
                 | '}' -> RIGHTBRACE
                 | ',' -> COMMA
@@ -192,15 +198,21 @@ module Scanner =
             | NUMBER -> ()
             | _ -> __.AddToken tokenType tokenType
 
-        member __.ScanTokens: List<Token> =
-            let rec scanLoop () =
-                match __.IsAtEnd with
-                | true -> ()
-                | false ->
-                    start <- current
-                    __.ScanToken()
-                    scanLoop ()
+        member __.ScanTokens : seq<Token> =
+            // let rec scanLoop () =
+            //     match __.IsAtEnd with
+            //     | true -> ()
+            //     | false ->
+            //         start <- current
+            //         __.ScanToken()
+            //         scanLoop ()
 
-            scanLoop ()
+            // scanLoop ()
+
+            while not (__.IsAtEnd) do
+                start <- current
+                __.ScanToken()
+
             tokens <- tokens @ [ Token(EOF, "", null, 0) ]
-            tokens
+
+            tokens |> List.toSeq
