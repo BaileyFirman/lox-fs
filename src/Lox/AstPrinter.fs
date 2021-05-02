@@ -8,7 +8,7 @@ open System
 
 module AstPrinter =
     type AstPrinter() as this =
-        member __.parenthesize (exprs: IExpr []) (name: string) : string =
+        member private __.parenthesize (exprs: IExpr []) (name: string) : string =
             let formattedExprs =
                 exprs
                 |> Array.map (fun expr -> $" {expr.Accept(this)}")
@@ -17,7 +17,7 @@ module AstPrinter =
             [| "("; name; formattedExprs; ")" |]
             |> String.Concat
 
-        member __.print(expr: IExpr) = expr.Accept(this)
+        member __.PrintAst(expr: IExpr) = expr.Accept(this)
 
         interface IVisitor<string> with
             member __.VisitBinaryExpr(expr: Binary) : string =

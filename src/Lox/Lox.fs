@@ -27,7 +27,7 @@ module LoxFs =
             let astPrinter = AstPrinter()
             let interpreter = Interpreter()
 
-            let astString = astPrinter.print expression
+            let astString = astPrinter.PrintAst expression
             let returnValue = interpreter.Interpret expression
 
             printfn $"{astString} -> {returnValue}"
@@ -43,7 +43,7 @@ module LoxFs =
         let rec runPrompt code =
             printf "> "
             let line = Console.ReadLine()
-            
+
             run line
 
             errorHandler.SetError false

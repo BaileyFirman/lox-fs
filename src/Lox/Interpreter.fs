@@ -7,9 +7,9 @@ open System
 
 module Interpreter =
     type Interpreter() as this =
-        member __.evaluate(expr: IExpr) : obj = expr.Accept(this)
+        member private __.evaluate(expr: IExpr) : obj = expr.Accept(this)
 
-        member __.parenthesize (exprs: seq<IExpr>) (name: string) : string =
+        member private __.parenthesize (exprs: seq<IExpr>) (name: string) : string =
             let formattedExprs =
                 exprs
                 |> Seq.map (fun expr -> $" {expr.Accept(this)}")
@@ -18,15 +18,15 @@ module Interpreter =
             [| "("; name; formattedExprs; ")" |]
             |> String.Concat
 
-        member __.print(expr: IExpr) = expr.Accept(this)
+        member private __.print(expr: IExpr) = expr.Accept(this)
 
-        member __.isTruthy(value: obj) : bool =
+        member private __.isTruthy(value: obj) : bool =
             match value with
             | nil -> false
             | value when value.GetType() = typeof<bool> -> Convert.ToBoolean obj
             | _ -> true
 
-        member __.isEqual left right = left = right
+        member private __.isEqual left right = left = right
 
         member __.Interpret expression = __.evaluate expression
 
