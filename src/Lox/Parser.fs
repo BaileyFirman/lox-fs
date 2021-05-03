@@ -3,6 +3,7 @@ namespace LoxFs
 open Token
 open TokenType
 open Expr
+open Stmt
 
 module Parser =
     type Parser(tokens: seq<Token>) =
@@ -58,6 +59,19 @@ module Parser =
                 let next = peek ()
                 error next message
                 next
+        and statement (): IStmt =
+            if matchToken [| PRINT |] then
+                printStatement()
+            else
+                expressionStatement()
+        and printStatement () =
+            let value = expression ()
+            consume SEMICOLON "Expect ',' after value." |> ignore
+            Print value :> IStmt
+        and expressionStatement () =
+            let value = expression ()
+            consume SEMICOLON "Expect ',' after expression." |> ignore
+            Expression value :> IStmt
         and primary () : IExpr =
             let mutable ret : IExpr = Literal(false) :> IExpr
 
@@ -147,8 +161,14 @@ module Parser =
 
             expr
         and parse () =
+            let mutable statements = []
+            while isAtEnd () |> not do
+                statements <- statements @ [statement ()]
+
             // tokens
             // |> Seq.iter(fun x -> printfn $"{x.lexeme} {x.line} {x.literal} {x.tokenType}")
-            expression ()
+            // expression ()
+
+            statements
 
         member __.Start() = parse ()

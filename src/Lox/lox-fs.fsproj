@@ -10,6 +10,7 @@
     <Compile Include="Error.fs" />
     <Compile Include="Token.fs" />
     <Compile Include="Expr.fs" />
+    <Compile Include="Stmt.fs" />
     <Compile Include="Scanner.fs" />
     <Compile Include="AstPrinter.fs" />
     <Compile Include="Interpreter.fs" />
