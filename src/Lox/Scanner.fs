@@ -13,18 +13,20 @@ module Scanner =
         let mutable start = 0
         let mutable current = 0
         let mutable line = 1
-        
-        let isAtEnd () =
-            current >= source.Length
+
+        let isAtEnd () = current >= source.Length
 
         let peek () =
-            if isAtEnd () then '\u0004'
-            else source.[current]
+            if isAtEnd () then
+                '\u0004'
+            else
+                source.[current]
 
         let peekNext () =
-            if(current + 1 >= source.Length)
-            then '\u0004'
-            else source.[current + 1]
+            if (current + 1 >= source.Length) then
+                '\u0004'
+            else
+                source.[current + 1]
 
 
         let advance () =
@@ -32,49 +34,45 @@ module Scanner =
             current <- current + 1
             c
 
-        let addToken2 tokenType literal =
+        let addLiteralToken tokenType literal =
             let text = source.[start..(current - 1)]
             let token = Token(tokenType, text, literal, line)
             tokens <- (token :: tokens)
             ()
 
-        let addToken tokenType =
-            addToken2 tokenType null
+        let addToken tokenType = addLiteralToken tokenType null
 
-        let matchToken expected: bool =
-            if isAtEnd ()
-            then false
+        let matchToken expected : bool =
+            if isAtEnd () then
+                false
+            else if source.[current] <> expected then
+                false
             else
-                if source.[current] <> expected
-                then false
-                else
-                    current <- current + 1
-                    true
+                current <- current + 1
+                true
 
         let number () =
-            while (Char.IsDigit (peek ())) do
-                advance ()
+            while (Char.IsDigit(peek ())) do
+                advance () |> ignore
 
-            if (peek () = '.' && (Char.IsDigit(peekNext())))
-            then
-                advance ()
+            if (peek () = '.' && (Char.IsDigit(peekNext ()))) then
+                advance () |> ignore
 
-                while (Char.IsDigit(peekNext())) do
-                    advance ()
+                while (Char.IsDigit(peekNext ())) do
+                    advance () |> ignore
             else
                 ()
 
             let double =
-                    Double.Parse source.[start..(current - 1)]
+                Double.Parse source.[start..(current - 1)]
 
-            addToken2 NUMBER double
+            addLiteralToken NUMBER double
 
         let identifier () =
-            while (Char.IsLetterOrDigit (peek ())) do
-                advance ()
+            while (Char.IsLetterOrDigit(peek ())) do
+                advance () |> ignore
 
             let text = source.[start..(current - 1)]
-            // printfn $">>>>>>> {text}"
 
             let tokenType =
                 match text with
@@ -99,7 +97,16 @@ module Scanner =
             addToken tokenType
 
         let scanToken () =
-            let c = advance()
+            let c = advance ()
+
+            let addCompoundToken compoundType normalType =
+                let kind =
+                    if matchToken '=' then
+                        compoundType
+                    else
+                        normalType
+
+                addToken kind
 
             match c with
             | '(' -> addToken LEFTPAREN
@@ -112,56 +119,39 @@ module Scanner =
             | '+' -> addToken PLUS
             | ';' -> addToken SEMICOLON
             | '*' -> addToken STAR
-            | '!' ->
-                let kind = if matchToken '=' then BANGEQUAL else BANG
-                addToken kind
-            | '=' ->
-                let kind = if matchToken '=' then EQUALEQUAL else EQUAL
-                addToken kind
-            | '<' ->
-                let kind = if matchToken '=' then LESSEQUAL else LESS
-                addToken kind
-            | '>' ->
-                let kind = if matchToken '=' then GREATEREQUAL else GREATER
-                addToken kind
+            | '!' -> addCompoundToken BANGEQUAL BANG
+            | '=' -> addCompoundToken EQUALEQUAL EQUAL
+            | '<' -> addCompoundToken LESSEQUAL LESS
+            | '>' -> addCompoundToken GREATEREQUAL GREATER
             | '/' ->
-                if matchToken '/'
-                then
-                    while (peek() <> '\n' && not(isAtEnd ())) do
-                        advance ()
+                if matchToken '/' then
+                    while (peek () <> '\n' && not (isAtEnd ())) do
+                        advance () |> ignore
                 else
                     addToken SLASH
             | ' '
             | '\r'
             | '\t' -> ()
-            | '\n' ->
-                line <- line + 1
+            | '\n' -> line <- line + 1
             | '"' ->
-                while (peek() <> '"' && not(isAtEnd ())) do
-                    if peek () = '\n'
-                    then line <- line + 1
-                    else ()
+                while (peek () <> '"' && not (isAtEnd ())) do
+                    if peek () = '\n' then line <- line + 1
 
-                    advance ()
+                    advance () |> ignore
 
-                // if isAtEnd () then
+                advance () |> ignore
 
-                advance ()
-
-                let value = source.[(start + 1)..(current - 2)]  // maybe bug
-                addToken2 STRING value
+                let value = source.[(start + 1)..(current - 2)] // maybe bug
+                addLiteralToken STRING value
 
                 ()
             | c ->
-                if (Char.IsDigit c)
-                then
+                if (Char.IsDigit c) then
                     number ()
+                else if (Char.IsLetter c) then
+                    identifier ()
                 else
-                    if (Char.IsLetter c)
-                    then
-                        identifier ()
-                    else
-                        ()
+                    ()
 
         member __.ScanTokens : seq<Token> =
             while not (isAtEnd ()) do
