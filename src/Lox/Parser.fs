@@ -59,18 +59,24 @@ module Parser =
                 let next = peek ()
                 error next message
                 next
-        and statement (): IStmt =
+        and statement () : IStmt =
             if matchToken [| PRINT |] then
-                printStatement()
+                printStatement ()
             else
-                expressionStatement()
+                expressionStatement ()
         and printStatement () =
             let value = expression ()
-            consume SEMICOLON "Expect ',' after value." |> ignore
+
+            consume SEMICOLON "Expect ';' after value."
+            |> ignore
+
             Print value :> IStmt
         and expressionStatement () =
             let value = expression ()
-            consume SEMICOLON "Expect ',' after expression." |> ignore
+
+            consume SEMICOLON "Expect ';' after expression."
+            |> ignore
+
             Expression value :> IStmt
         and primary () : IExpr =
             let mutable ret : IExpr = Literal(false) :> IExpr
@@ -162,8 +168,11 @@ module Parser =
             expr
         and parse () =
             let mutable statements = []
-            while isAtEnd () |> not do
-                statements <- statements @ [statement ()]
+
+            while not (isAtEnd ()) do
+                statements <-
+                    // printfn "Adding Statement"
+                    statements @ [ statement () ]
 
             // tokens
             // |> Seq.iter(fun x -> printfn $"{x.lexeme} {x.line} {x.literal} {x.tokenType}")

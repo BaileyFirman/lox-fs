@@ -1,6 +1,5 @@
 namespace LoxFs
 
-open Token
 open Expr
 
 module Stmt =

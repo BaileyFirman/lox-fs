@@ -9,4 +9,4 @@ module Token =
         member __.literal : obj = literal
         member __.line : int = line
 
-        override __.ToString() = $"{tokenType} {lexeme}"
+        override __.ToString() = $"{tokenType} {lexeme} {literal}"
