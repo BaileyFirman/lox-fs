@@ -7,6 +7,7 @@ open Error
 open AstPrinter
 open Parser
 open Interpreter
+open System.Diagnostics
 
 module LoxFs =
     [<EntryPoint>]
@@ -18,18 +19,31 @@ module LoxFs =
             Environment.Exit code
 
         let run source =
+            let sw = Stopwatch()
+            sw.Start() |> ignore
+
             let scanner = Scanner(source, errorHandler)
             let tokens = scanner.ScanTokens
 
             let parser = Parser(tokens)
             let statements = parser.Start()
 
+            printfn $"Parsed In |> {sw.ElapsedMilliseconds}ms"
+
             let astPrinter = AstPrinter()
+
+            sw.Reset() |> ignore
+            sw.Start() |> ignore
+
             let interpreter = Interpreter()
-            
+
             let returnValue = interpreter.Interpret statements
 
+            sw.Stop() |> ignore
+            printfn $"Interpreted In |> {sw.ElapsedMilliseconds}ms"
+
             // printfn $"-> {returnValue}"
+
             ()
 
         let runFile path =
