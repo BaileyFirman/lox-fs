@@ -22,15 +22,15 @@ module LoxFs =
             let tokens = scanner.ScanTokens
 
             let parser = Parser(tokens)
-            let expression = parser.Start()
+            let statements = parser.Start()
 
             let astPrinter = AstPrinter()
             let interpreter = Interpreter()
+            
+            let returnValue = interpreter.Interpret statements
 
-            let astString = astPrinter.PrintAst expression
-            let returnValue = interpreter.Interpret expression
-
-            printfn $"{astString} -> {returnValue}"
+            // printfn $"-> {returnValue}"
+            ()
 
         let runFile path =
             let file = File.ReadAllText path

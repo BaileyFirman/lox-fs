@@ -2,6 +2,7 @@ namespace LoxFs
 
 open TokenType
 open Expr
+open Stmt
 open Microsoft.FSharp.Core
 open System
 
@@ -28,9 +29,30 @@ module Interpreter =
 
         member private __.isEqual left right = left = right
 
-        member __.Interpret expression = __.evaluate expression
+        member __.InterpretExpression expression = __.evaluate expression
 
-        interface IVisitor<obj> with
+        member __.Execute (stmt: IStmt) =
+            stmt.Accept(this) |> ignore
+            null
+
+        member __.Interpret(statements: seq<IStmt>) =
+            statements
+            |> Seq.toArray
+            |> Array.map __.Execute
+
+        member __.Stringify value =
+            match value with
+            | value when value.GetType() = typeof<double> ->
+                let text = value.ToString()
+
+                if text.EndsWith(".0") then
+                    text.[0..(text.Length - 2)]
+                else
+                    text
+            | null -> "nil"
+            | _ -> value.ToString()
+
+        interface Expr.IVisitor<obj> with
             member __.VisitBinaryExpr(expr: Binary) : obj =
                 let left : obj = __.evaluate expr.Left
                 let right : obj = __.evaluate expr.Right
@@ -73,3 +95,13 @@ module Interpreter =
                 | BANG -> (not (__.isTruthy right)) :> obj
                 | MINUS -> (-(right)) :> obj
                 | _ -> new obj () // Unreachable
+
+        interface Stmt.IStmtVisitor<obj> with
+            member __.VisitExpressionStmt(stmt: Expression) =
+                __.evaluate stmt.Expression |> ignore
+                null
+
+            member __.VisitPrintStmt(stmt: Print) =
+                let value = __.evaluate stmt.Expression
+                printfn $"{__.Stringify value}"
+                null
