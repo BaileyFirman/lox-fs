@@ -42,7 +42,7 @@ module Expr =
             member __.Accept(visitor: IVisitor<'T>) = visitor.VisitUnaryExpr(this)
 
     and Variable(name) as this =
-        member __.Token : Token = name
+        member __.Name : Token = name
 
         interface IExpr with
             member __.Accept(visitor: IVisitor<'T>) = visitor.VisitVariableExpr(this)

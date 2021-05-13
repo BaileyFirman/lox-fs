@@ -5,9 +5,12 @@ open Expr
 open Stmt
 open Microsoft.FSharp.Core
 open System
+open System.Collections.Generic
 
 module Interpreter =
     type Interpreter() as this =
+        let mutable environment = new Dictionary<string, obj>()
+
         member private __.evaluate(expr: IExpr) : obj = expr.Accept(this)
 
         member private __.parenthesize (exprs: seq<IExpr>) (name: string) : string =
@@ -105,6 +108,9 @@ module Interpreter =
                 | MINUS -> (-(right)) :> obj
                 | _ -> new obj () // Unreachable
 
+            member __.VisitVariableExpr(expr: Variable) =
+                environment.[expr.Name.lexeme]
+
         interface Stmt.IStmtVisitor<obj> with
             member __.VisitExpressionStmt(stmt: Expression) =
                 __.evaluate stmt.Expression |> ignore
@@ -113,4 +119,9 @@ module Interpreter =
             member __.VisitPrintStmt(stmt: Print) =
                 let value = __.evaluate stmt.Expression
                 printfn $"{__.Stringify value}"
+                null
+
+            member __.VisitVarStmt(stmt: Var) =
+                let value =  __.evaluate stmt.Initializer
+                environment.[stmt.Name.lexeme] <- value
                 null

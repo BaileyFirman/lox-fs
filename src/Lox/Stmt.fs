@@ -25,8 +25,8 @@ module Stmt =
             member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitPrintStmt(this)
 
     and Var(token, initializer) as this =
-        member __.Token : Token = token
-        member __.Expression : IExpr = initializer
+        member __.Name : Token = token
+        member __.Initializer : IExpr = initializer
 
         interface IStmt with
             member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitVarStmt(this)

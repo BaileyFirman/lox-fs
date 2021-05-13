@@ -122,6 +122,11 @@ module Parser =
             else
                 ()
 
+            if matchToken [| IDENTIFIER |] then
+                ret <- Variable(previous ()) :> IExpr
+            else
+                ()
+
             if matchToken [| LEFTPAREN |] then
                 let expr = expression ()
 

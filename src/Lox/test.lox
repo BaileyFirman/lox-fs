@@ -1,5 +1,10 @@
-print "One is the lonliest number that you'll ever see";
-print "Two can be as bad as one";
-print "It's the lonliest number since the number one";
-print true;
-print 2 + 1;
+// print "One is the lonliest number that you'll ever see";
+// print "Two can be as bad as one";
+// print "It's the lonliest number since the number one";
+// print true;
+// print 2 + 1;
+var mgy = 1;
+var mg = 42;
+print mgy + mg;
+var asdf = "asdf";
+print asdf;

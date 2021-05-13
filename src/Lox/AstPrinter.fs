@@ -5,6 +5,7 @@ open TokenType
 open Expr
 open Microsoft.FSharp.Core
 open System
+open Stmt
 
 module AstPrinter =
     type AstPrinter() as this =
@@ -37,3 +38,5 @@ module AstPrinter =
             member __.VisitUnaryExpr(expr: Unary) : string =
                 let exprs = [| expr.Right |]
                 __.parenthesize exprs expr.Operator.lexeme
+
+            member __.VisitVariableExpr(stmt: Variable) : string = ""
