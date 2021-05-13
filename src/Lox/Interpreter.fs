@@ -23,11 +23,20 @@ module Interpreter =
 
         member private __.isTruthy(value: obj) : bool =
             match value with
-            | nil -> false
+            | null -> false
             | value when value.GetType() = typeof<bool> -> Convert.ToBoolean obj
             | _ -> true
 
-        member private __.isEqual left right = left = right
+        member private __.isEqual left right =
+            if left = null && right = null
+            then
+                true
+            else
+                if left = null
+                then
+                    false
+                else
+                    left = right
 
         member __.InterpretExpression expression = __.evaluate expression
 
