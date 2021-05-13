@@ -51,7 +51,28 @@ module Parser =
             else
                 report token.line " at " $"{token.lexeme}'{message}"
 
-        let rec expression () = equality () :> IExpr
+        let rec expression () =
+            equality () :> IExpr
+        and varDeclaration () =
+            let name: Token = consume IDENTIFIER "Expect variable name"
+            let mutable intializer: IExpr = Literal(false) :> IExpr
+
+            if matchToken [| EQUAL |]
+            then
+                intializer <- expression ()
+            else
+                ()
+            
+            consume SEMICOLON "Expect ';' after variable declaration." |> ignore
+            Var(name, intializer) :> IStmt
+
+        and declaration () =
+            if matchToken [| VAR |]
+            then
+                varDeclaration ()
+            else
+                statement ()
+
         and consume tokenType (message: string) : Token =
             if check tokenType then
                 advance ()
@@ -172,7 +193,8 @@ module Parser =
             while not (isAtEnd ()) do
                 statements <-
                     // printfn "Adding Statement"
-                    statements @ [ statement () ]
+                    // statements @ [ statement () ]
+                    statements @ [ declaration () ]
 
             // tokens
             // |> Seq.iter(fun x -> printfn $"{x.lexeme} {x.line} {x.literal} {x.tokenType}")
