@@ -13,194 +13,161 @@ module Scanner =
         let mutable start = 0
         let mutable current = 0
         let mutable line = 1
+        
+        let isAtEnd () =
+            current >= source.Length
 
-        member __.IsAtEnd = current >= source.Length
+        let peek () =
+            if isAtEnd () then '\u0004'
+            else source.[current]
 
-        member __.Advance =
+        let peekNext () =
+            if(current + 1 >= source.Length)
+            then '\u0004'
+            else source.[current + 1]
+
+
+        let advance () =
+            let c = source.[current]
             current <- current + 1
-            source.[current - 1]
+            c
 
-        member __.AddToken tokenType literal =
+        let addToken2 tokenType literal =
             let text = source.[start..(current - 1)]
-            let newToken = Token(tokenType, text, literal, line)
-            tokens <- tokens @ [ newToken ]
+            let token = Token(tokenType, text, literal, line)
+            tokens <- (token :: tokens)
+            ()
 
-        member __.MatchChar expected =
-            match __.IsAtEnd || source.[current] <> expected with
-            | true -> false
-            | false ->
-                current <- current + 1
-                true
+        let addToken tokenType =
+            addToken2 tokenType null
 
-        member __.Peek =
-            match __.IsAtEnd with
-            | true -> '\u0004'
-            | false -> source.[current]
-
-        member __.PeekNext =
-            let next = current + 1
-
-            match next >= source.Length with
-            | true -> '\u0004'
-            | false -> source.[next]
-
-        member __.ScanToken =
-            let c = __.Advance
-
-            let matchEqual t f = if __.MatchChar '=' then t else f
-
-            let matchDivision () =
-                let rec comment () =
-                    match __.Peek <> '\n' && (not __.IsAtEnd) with
-                    | true ->
-                        __.Advance |> ignore
-                        comment ()
-                    | false -> COMMENT
-
-                if __.MatchChar '/' then
-                    comment ()
+        let matchToken expected: bool =
+            if isAtEnd ()
+            then false
+            else
+                if source.[current] <> expected
+                then false
                 else
-                    SLASH
+                    current <- current + 1
+                    true
 
-            let matchString () =
-                let rec string () =
-                    match __.Peek <> '"' && (not __.IsAtEnd) with
-                    | true ->
-                        match __.Peek = '\n' with
-                        | true -> line <- line + 1
-                        | false -> ()
+        let number () =
+            while (Char.IsDigit (peek ())) do
+                advance ()
 
-                        __.Advance |> ignore
-                        string ()
-                    | false -> ()
+            if (peek () = '.' && (Char.IsDigit(peekNext())))
+            then
+                advance ()
 
-                string ()
+                while (Char.IsDigit(peekNext())) do
+                    advance ()
+            else
+                ()
 
-                match __.IsAtEnd with
-                | true ->
-                    errorHandler.Error line "Unterminated String."
-                    ()
-                | false ->
-                    __.Advance |> ignore
-                    ()
-
-                let value = source.[(start + 1)..(current - 1)]
-                __.AddToken STRING value
-
-                STRING
-
-            let newline () =
-                line <- line + 1
-                WHITESPACE
-
-            let error line =
-                errorHandler.Error line "Unexpected Character"
-                ERROR
-
-            let matchNumber () =
-                let rec number () =
-                    let next = __.Peek
-
-                    match Char.IsDigit next with
-                    | true ->
-                        __.Advance |> ignore
-                        number ()
-                    | false -> ()
-
-                number ()
-
-                let next = __.Peek
-                let nextIsDigit = Char.IsDigit <| __.PeekNext
-
-                match next = '.' && nextIsDigit with
-                | true ->
-                    __.Advance |> ignore
-                    number ()
-                | false -> ()
-
-                let double =
+            let double =
                     Double.Parse source.[start..(current - 1)]
 
-                __.AddToken NUMBER double
-                NUMBER
+            addToken2 NUMBER double
 
-            let isAlpha c = Char.IsLetter c || c = '_'
-            let isAlphaNumeric c = Char.IsDigit c || isAlpha c
+        let identifier () =
+            while (Char.IsLetterOrDigit (peek ())) do
+                advance ()
 
-            let matchIdentifier () =
-                let rec identifier () =
-                    if isAlphaNumeric <| __.Peek then
-                        __.Advance |> ignore
+            let text = source.[start..(current - 1)]
+            // printfn $">>>>>>> {text}"
+
+            let tokenType =
+                match text with
+                | "and" -> AND
+                | "class" -> CLASS
+                | "else" -> ELSE
+                | "false" -> FALSE
+                | "for" -> FOR
+                | "fun" -> FUN
+                | "if" -> IF
+                | "nil" -> NIL
+                | "or" -> OR
+                | "print" -> PRINT
+                | "return" -> RETURN
+                | "super" -> SUPER
+                | "this" -> THIS
+                | "true" -> TRUE
+                | "var" -> VAR
+                | "while" -> WHILE
+                | _ -> IDENTIFIER
+
+            addToken tokenType
+
+        let scanToken () =
+            let c = advance()
+
+            match c with
+            | '(' -> addToken LEFTPAREN
+            | ')' -> addToken RIGHTPAREN
+            | '{' -> addToken LEFTBRACE
+            | '}' -> addToken RIGHTBRACE
+            | ',' -> addToken COMMA
+            | '.' -> addToken DOT
+            | '-' -> addToken MINUS
+            | '+' -> addToken PLUS
+            | ';' -> addToken SEMICOLON
+            | '*' -> addToken STAR
+            | '!' ->
+                let kind = if matchToken '=' then BANGEQUAL else BANG
+                addToken kind
+            | '=' ->
+                let kind = if matchToken '=' then EQUALEQUAL else EQUAL
+                addToken kind
+            | '<' ->
+                let kind = if matchToken '=' then LESSEQUAL else LESS
+                addToken kind
+            | '>' ->
+                let kind = if matchToken '=' then GREATEREQUAL else GREATER
+                addToken kind
+            | '/' ->
+                if matchToken '/'
+                then
+                    while (peek() <> '\n' && not(isAtEnd ())) do
+                        advance ()
+                else
+                    addToken SLASH
+            | ' '
+            | '\r'
+            | '\t' -> ()
+            | '\n' ->
+                line <- line + 1
+            | '"' ->
+                while (peek() <> '"' && not(isAtEnd ())) do
+                    if peek () = '\n'
+                    then line <- line + 1
+                    else ()
+
+                    advance ()
+
+                // if isAtEnd () then
+
+                advance ()
+
+                let value = source.[(start + 1)..(current - 2)]  // maybe bug
+                addToken2 STRING value
+
+                ()
+            | c ->
+                if (Char.IsDigit c)
+                then
+                    number ()
+                else
+                    if (Char.IsLetter c)
+                    then
                         identifier ()
                     else
                         ()
 
-                let string = source.[start..current]
-
-                let tokenType =
-                    match string with
-                    | "and" -> AND
-                    | "class" -> CLASS
-                    | "else" -> ELSE
-                    | "false" -> FALSE
-                    | "for" -> FOR
-                    | "fun" -> FUN
-                    | "if" -> IF
-                    | "nil" -> NIL
-                    | "or" -> OR
-                    | "print" -> PRINT
-                    | "return" -> RETURN
-                    | "super" -> SUPER
-                    | "this" -> THIS
-                    | "true" -> TRUE
-                    | "var" -> VAR
-                    | "while" -> WHILE
-                    | _ -> IDENTIFIER
-
-                __.AddToken tokenType string
-
-                tokenType
-
-            let handleOther (c: char) =
-                if Char.IsDigit c then matchNumber ()
-                elif isAlpha c then matchIdentifier ()
-                else error line
-
-            let tokenType =
-                match c with
-                | '(' -> LEFTPAREN
-                | ')' -> RIGHTPAREN
-                | '{' -> LEFTBRACE
-                | '}' -> RIGHTBRACE
-                | ',' -> COMMA
-                | '.' -> DOT
-                | '-' -> MINUS
-                | '+' -> PLUS
-                | ';' -> SEMICOLON
-                | '*' -> STAR
-                | '!' -> matchEqual BANGEQUAL BANG
-                | '=' -> matchEqual EQUALEQUAL EQUAL
-                | '<' -> matchEqual LESSEQUAL LESS
-                | '>' -> matchEqual GREATEREQUAL GREATER
-                | '/' -> matchDivision ()
-                | '"' -> matchString ()
-                | ' '
-                | '\r'
-                | '\t' -> WHITESPACE
-                | '\n' -> newline ()
-                | c -> handleOther c
-
-
-            match tokenType with
-            | WHITESPACE
-            | ERROR
-            | STRING
-            | NUMBER -> ()
-            | _ -> __.AddToken tokenType tokenType
-
         member __.ScanTokens : seq<Token> =
-            while not (__.IsAtEnd) do
+            while not (isAtEnd ()) do
                 start <- current
-                __.ScanToken
+                scanToken ()
 
-            tokens @ [ Token(EOF, "", null, 0) ] |> List.toSeq
+            (Token(EOF, "", null, 0) :: tokens)
+            |> List.rev
+            |> List.toSeq
