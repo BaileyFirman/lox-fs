@@ -8,6 +8,7 @@ module Expr =
         abstract VisitGroupingExpr : Grouping -> 'T
         abstract VisitLiteralExpr : Literal -> 'T
         abstract VisitUnaryExpr : Unary -> 'T
+        abstract VisitVariableExpr : Variable -> 'T
 
     and IExpr =
         // inherit IVisitor<obj>
@@ -39,3 +40,9 @@ module Expr =
 
         interface IExpr with
             member __.Accept(visitor: IVisitor<'T>) = visitor.VisitUnaryExpr(this)
+
+    and Variable(name) as this =
+        member __.Token : Token = name
+
+        interface IExpr with
+            member __.Accept(visitor: IVisitor<'T>) = visitor.VisitVariableExpr(this)
