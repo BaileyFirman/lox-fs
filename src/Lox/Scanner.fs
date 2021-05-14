@@ -74,6 +74,10 @@ module Scanner =
 
             let text = source.[start..(current - 1)]
 
+            #if DEBUG
+            // printfn $"Scanner::Identifier text <- <{text}>"
+            #endif
+
             let tokenType =
                 match text with
                 | "and" -> AND

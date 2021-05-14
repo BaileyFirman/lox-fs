@@ -6,5 +6,5 @@
 var mgy = 1;
 var mg = 42;
 print mgy + mg;
-var asdf = "asdf";
-print asdf;
+// var asdf = "asdf";
+print "asdf";

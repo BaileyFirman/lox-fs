@@ -50,12 +50,28 @@ module Parser =
                 report token.line " at end" message
             else
                 report token.line " at " $"{token.lexeme}'{message}"
-
         let rec expression () =
-            equality () :> IExpr
+            assignment () :> IExpr
+        and assignment () =
+            let expr: IExpr = equality ()
+
+            if matchToken [| EQUAL |]
+            then
+                let equals = previous ()
+                let value = assignment ()
+
+                if (expr :? Variable)
+                then
+                    let name = (expr :?> Variable).Name
+                    Assign(name, value) :> IExpr
+                else
+                    error equals "Invalid assignment target."
+            else
+                expr
+
         and varDeclaration () =
             let name: Token = consume IDENTIFIER "Expect variable name"
-            let mutable intializer: IExpr = Literal(false) :> IExpr
+            let mutable intializer: IExpr = Literal(null) :> IExpr
 
             if matchToken [| EQUAL |]
             then
@@ -69,6 +85,7 @@ module Parser =
         and declaration () =
             if matchToken [| VAR |]
             then
+                printfn "Vaarder"
                 varDeclaration ()
             else
                 statement ()
