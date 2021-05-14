@@ -3,13 +3,15 @@ namespace LoxFs
 open TokenType
 open Expr
 open Stmt
+open Env
 open Microsoft.FSharp.Core
 open System
 open System.Collections.Generic
 
 module Interpreter =
     type Interpreter() as this =
-        let mutable environment = new Dictionary<string, obj>()
+        // let mutable environment = new Dictionary<string, obj>()
+        let mutable env = Env(None)
 
         member private __.evaluate(expr: IExpr) : obj = expr.Accept(this)
 
@@ -109,7 +111,13 @@ module Interpreter =
                 | _ -> new obj () // Unreachable
 
             member __.VisitVariableExpr(expr: Variable) =
-                environment.[expr.Name.lexeme]
+                env.Get expr.Name
+
+            member __.VisitAssignExpr(expr: Assign) =
+                let value =  __.evaluate expr.Value
+                printfn $"??{value}"
+                env.Assign(expr.Name, value)
+                value
 
         interface Stmt.IStmtVisitor<obj> with
             member __.VisitExpressionStmt(stmt: Expression) =
@@ -117,11 +125,18 @@ module Interpreter =
                 null
 
             member __.VisitPrintStmt(stmt: Print) =
+                // printfn $"Interpreter::Stmt::VisitPrintStmt {stmt}"
                 let value = __.evaluate stmt.Expression
                 printfn $"{__.Stringify value}"
                 null
 
             member __.VisitVarStmt(stmt: Var) =
-                let value =  __.evaluate stmt.Initializer
-                environment.[stmt.Name.lexeme] <- value
+                let mutable value: obj = null
+
+                value <- __.evaluate stmt.Initializer
+
+                env.Define stmt.Name.lexeme value
+                #if DEBUG
+                // printfn $"Interpreter::Stmt::VisitVarStmt name {stmt.Name} <- {value} {stmt.Name.lexeme}"
+                #endif
                 null

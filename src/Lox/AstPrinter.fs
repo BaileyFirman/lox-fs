@@ -40,3 +40,5 @@ module AstPrinter =
                 __.parenthesize exprs expr.Operator.lexeme
 
             member __.VisitVariableExpr(stmt: Variable) : string = ""
+
+            member __.VisitAssignExpr(expr: Assign) = ""

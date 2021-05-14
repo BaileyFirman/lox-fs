@@ -9,9 +9,9 @@ module Expr =
         abstract VisitLiteralExpr : Literal -> 'T
         abstract VisitUnaryExpr : Unary -> 'T
         abstract VisitVariableExpr : Variable -> 'T
+        abstract VisitAssignExpr : Assign -> 'T
 
     and IExpr =
-        // inherit IVisitor<obj>
         abstract Accept : IVisitor<'T> -> 'T
 
     and Binary(left, operator, right) as this =
@@ -46,3 +46,10 @@ module Expr =
 
         interface IExpr with
             member __.Accept(visitor: IVisitor<'T>) = visitor.VisitVariableExpr(this)
+
+    and Assign(name, value) as this =
+        member __.Name : Token = name
+        member __.Value : IExpr = value
+
+        interface IExpr with
+            member __.Accept(visitor: IVisitor<'T>) = visitor.VisitAssignExpr(this)
