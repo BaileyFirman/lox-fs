@@ -85,7 +85,6 @@ module Parser =
         and declaration () =
             if matchToken [| VAR |]
             then
-                printfn "Vaarder"
                 varDeclaration ()
             else
                 statement ()
@@ -98,10 +97,15 @@ module Parser =
                 error next message
                 next
         and statement () : IStmt =
-            if matchToken [| PRINT |] then
+            if matchToken [| PRINT |]
+            then
                 printStatement ()
             else
-                expressionStatement ()
+                if matchToken [| LEFTBRACE |]
+                then
+                    Block(block()) :> IStmt
+                else
+                    expressionStatement ()
         and printStatement () =
             let value = expression ()
 
@@ -116,6 +120,16 @@ module Parser =
             |> ignore
 
             Expression value :> IStmt
+        and block () =
+            let mutable statements: list<IStmt> = []
+
+            while ((not (check RIGHTBRACE)) && (not (isAtEnd ()))) do
+                statements <- statements @ [ declaration () ]
+
+            consume RIGHTBRACE "Expect '}' after block."
+            |> ignore
+
+            statements
         and primary () : IExpr =
             let mutable ret : IExpr = Literal(false) :> IExpr
 

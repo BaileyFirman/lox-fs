@@ -8,6 +8,7 @@ module Stmt =
         abstract VisitExpressionStmt : Expression -> 'T
         abstract VisitPrintStmt : Print -> 'T
         abstract VisitVarStmt : Var -> 'T
+        abstract VisitBlockStmt : Block -> 'T
 
     and IStmt =
         abstract Accept : IStmtVisitor<'T> -> 'T
@@ -30,3 +31,9 @@ module Stmt =
 
         interface IStmt with
             member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitVarStmt(this)
+
+    and Block(statements) as this =
+        member __.Statements : list<IStmt> = statements
+
+        interface IStmt with
+            member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitBlockStmt(this)

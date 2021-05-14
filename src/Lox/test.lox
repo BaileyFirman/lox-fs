@@ -3,8 +3,28 @@
 // print "It's the lonliest number since the number one";
 // print true;
 // print 2 + 1;
-var mgy = 1;
-var mg = 42;
-print mgy + mg;
+//var mgy = 1;
+//var mg = 42;
+//print mgy + mg;
 // var asdf = "asdf";
-print "asdf";
+//print "asdf";
+
+var a = "global a";
+var b = "global b";
+var c = "global c";
+{
+  var a = "outer a";
+  var b = "outer b";
+  {
+    var a = "inner a";
+    print a;
+    print b;
+    print c;
+  }
+  print a;
+  print b;
+  print c;
+}
+print a;
+print b;
+print c;
