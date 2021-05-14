@@ -22,15 +22,18 @@ module Env =
         member public __.Define (name: string) value =
             values.[name] <- value
 
-        member public __.Assign (name: Token, value: obj) =
+        member public __.Assign(name: Token, value: obj) =
             match values.ContainsKey name.lexeme with
             | true -> values.[name.lexeme] <- value
-            | false -> ()
+            | false ->
+                match enclosing with
+                | Some e -> e.Assign(name, value)
+                | None -> ()
 
         member public __.Assign (name: Token, value: obj option) =
             let actual =
                 match value with
-                | Some v -> value.Value
+                | Some v -> v
                 | None -> new obj() // should be unreachable
 
             __.Assign (name, actual)

@@ -49,6 +49,19 @@ module Interpreter =
             stmt.Accept(this) |> ignore
             null
 
+        member __.ExecuteBlock (statements: list<IStmt>) (environment: Env) =
+            let previous = env // consider optional
+
+            env <- environment
+
+            let executions =
+                statements
+                |> List.map __.Execute
+
+            let z = executions.Length
+
+            env <- previous
+
         member __.Interpret(statements: seq<IStmt>) =
             statements
             |> Seq.toArray
@@ -139,4 +152,9 @@ module Interpreter =
                 #if DEBUG
                 // printfn $"Interpreter::Stmt::VisitVarStmt name {stmt.Name} <- {value} {stmt.Name.lexeme}"
                 #endif
+                null
+
+            member __.VisitBlockStmt(stmt: Block) =
+                let mutable newEnv = Env(Some(env))
+                __.ExecuteBlock stmt.Statements newEnv
                 null
