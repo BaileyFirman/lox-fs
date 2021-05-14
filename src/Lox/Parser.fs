@@ -50,45 +50,42 @@ module Parser =
                 report token.line " at end" message
             else
                 report token.line " at " $"{token.lexeme}'{message}"
-        let rec expression () =
-            assignment () :> IExpr
-        and assignment () =
-            let expr: IExpr = equality ()
 
-            if matchToken [| EQUAL |]
-            then
+        let rec expression () = assignment () :> IExpr
+        and assignment () =
+            let expr : IExpr = equality ()
+
+            if matchToken [| EQUAL |] then
                 let equals = previous ()
                 let value = assignment ()
 
-                if (expr :? Variable)
-                then
+                if (expr :? Variable) then
                     let name = (expr :?> Variable).Name
                     Assign(name, value) :> IExpr
                 else
                     error equals "Invalid assignment target."
             else
                 expr
-
         and varDeclaration () =
-            let name: Token = consume IDENTIFIER "Expect variable name"
-            let mutable intializer: IExpr = Literal(null) :> IExpr
+            let name : Token =
+                consume IDENTIFIER "Expect variable name"
 
-            if matchToken [| EQUAL |]
-            then
+            let mutable intializer : IExpr = Literal(null) :> IExpr
+
+            if matchToken [| EQUAL |] then
                 intializer <- expression ()
             else
                 ()
-            
-            consume SEMICOLON "Expect ';' after variable declaration." |> ignore
-            Var(name, intializer) :> IStmt
 
+            consume SEMICOLON "Expect ';' after variable declaration."
+            |> ignore
+
+            Var(name, intializer) :> IStmt
         and declaration () =
-            if matchToken [| VAR |]
-            then
+            if matchToken [| VAR |] then
                 varDeclaration ()
             else
                 statement ()
-
         and consume tokenType (message: string) : Token =
             if check tokenType then
                 advance ()
@@ -97,15 +94,34 @@ module Parser =
                 error next message
                 next
         and statement () : IStmt =
-            if matchToken [| PRINT |]
-            then
+            if matchToken [| IF |] then
+                ifStatement ()
+            else if matchToken [| PRINT |] then
                 printStatement ()
+            else if matchToken [| LEFTBRACE |] then
+                Block(block ()) :> IStmt
             else
-                if matchToken [| LEFTBRACE |]
+                expressionStatement ()
+        and ifStatement () =
+            consume LEFTPAREN "Expect '(' after if."
+            |> ignore
+
+            let condition = expression ()
+
+            consume RIGHTPAREN "Expect ')' after if condition."
+            |> ignore
+
+            let thenBranch = statement ()
+            // let mutable elseBrach = null
+            let elseBranch =
+                if matchToken [| ELSE |]
                 then
-                    Block(block()) :> IStmt
+                    Some(statement ())
                 else
-                    expressionStatement ()
+                    None
+
+            If(condition, thenBranch, elseBranch) :> IStmt
+
         and printStatement () =
             let value = expression ()
 
@@ -121,7 +137,7 @@ module Parser =
 
             Expression value :> IStmt
         and block () =
-            let mutable statements: list<IStmt> = []
+            let mutable statements : list<IStmt> = []
 
             while ((not (check RIGHTBRACE)) && (not (isAtEnd ()))) do
                 statements <- statements @ [ declaration () ]

@@ -9,6 +9,7 @@ module Stmt =
         abstract VisitPrintStmt : Print -> 'T
         abstract VisitVarStmt : Var -> 'T
         abstract VisitBlockStmt : Block -> 'T
+        abstract VisitIfStmt : If -> 'T
 
     and IStmt =
         abstract Accept : IStmtVisitor<'T> -> 'T
@@ -37,3 +38,11 @@ module Stmt =
 
         interface IStmt with
             member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitBlockStmt(this)
+
+    and If(condition, thenBranch, elseBranch) as this =
+        member __.Condition : IExpr = condition
+        member __.ThenBranch : IStmt = thenBranch
+        member __.ElseBranch : IStmt option = elseBranch
+
+        interface IStmt with
+            member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitIfStmt(this)
