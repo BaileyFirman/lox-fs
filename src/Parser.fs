@@ -141,7 +141,6 @@ module Parser =
                     None
 
             If(condition, thenBranch, elseBranch) :> IStmt
-
         and printStatement () =
             let value = expression ()
 
@@ -149,6 +148,15 @@ module Parser =
             |> ignore
 
             Print value :> IStmt
+        and whileStatement (): IStmt =
+            consume LEFTPAREN "Expect '(' after 'while'."
+            |> ignore
+            let condition = expression ()
+            consume RIGHTPAREN "Expect ')' after condition."
+            |> ignore
+            let body = statement ()
+
+            While(condition, body) :> IStmt
         and expressionStatement () =
             let value = expression ()
 

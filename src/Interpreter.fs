@@ -153,6 +153,11 @@ module Interpreter =
                 env.Define stmt.Name.lexeme value
                 null
 
+            member __.VisitWhileStmt(stmt: While) =
+                while (__.isTruthy(__.evaluate(stmt.Condition))) do
+                    __.Execute stmt.Body |> ignore
+
+                null
             member __.VisitBlockStmt(stmt: Block) =
                 let mutable newEnv = Env(Some(env))
                 __.ExecuteBlock stmt.Statements newEnv

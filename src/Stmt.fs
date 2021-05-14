@@ -10,9 +10,15 @@ module Stmt =
         abstract VisitVarStmt : Var -> 'T
         abstract VisitBlockStmt : Block -> 'T
         abstract VisitIfStmt : If -> 'T
+        abstract VisitWhileStmt : While -> 'T
+        abstract VisitVoidStmt : VoidStmt -> 'T
 
     and IStmt =
         abstract Accept : IStmtVisitor<'T> -> 'T
+
+    and VoidStmt() as this =
+        interface IStmt with
+            member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitVoidStmt(this)
 
     and Expression(expression) as this =
         member __.Expression : IExpr = expression
@@ -46,3 +52,10 @@ module Stmt =
 
         interface IStmt with
             member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitIfStmt(this)
+
+    and While(condition, body) as this =
+        member __.Condition : IExpr = condition
+        member __.Body : IStmt = body
+
+        interface IStmt with
+            member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitWhileStmt(this)
