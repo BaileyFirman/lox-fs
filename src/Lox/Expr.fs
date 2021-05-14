@@ -10,6 +10,7 @@ module Expr =
         abstract VisitUnaryExpr : Unary -> 'T
         abstract VisitVariableExpr : Variable -> 'T
         abstract VisitAssignExpr : Assign -> 'T
+        abstract VisitLogicalExpr : Logical -> 'T
 
     and IExpr =
         abstract Accept : IVisitor<'T> -> 'T
@@ -53,3 +54,11 @@ module Expr =
 
         interface IExpr with
             member __.Accept(visitor: IVisitor<'T>) = visitor.VisitAssignExpr(this)
+
+    and Logical(left, operator, right) as this =
+        member __.Left : IExpr = left
+        member __.Operator : Token = operator
+        member __.Right : IExpr = right
+
+        interface IExpr with
+            member __.Accept(visitor: IVisitor<'T>) = visitor.VisitLogicalExpr(this)

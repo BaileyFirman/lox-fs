@@ -158,3 +158,12 @@ module Interpreter =
                 let mutable newEnv = Env(Some(env))
                 __.ExecuteBlock stmt.Statements newEnv
                 null
+
+            member __.VisitIfStmt(stmt: If) =
+                if __.isTruthy(__.evaluate(stmt.Condition))
+                then
+                    __.Execute stmt.ThenBranch
+                else
+                    match stmt.ElseBranch with
+                    | Some eb -> __.Execute eb
+                    | None -> null
