@@ -53,7 +53,7 @@ module Parser =
 
         let rec expression () = assignment () :> IExpr
         and assignment () =
-            let expr : IExpr = equality ()
+            let expr : IExpr = orEx ()
 
             if matchToken [| EQUAL |] then
                 let equals = previous ()
@@ -66,6 +66,26 @@ module Parser =
                     error equals "Invalid assignment target."
             else
                 expr
+        and orEx () =
+            let mutable expr = andEx ()
+
+            while matchToken [| OR |] do
+                let operator = previous ()
+                let right = andEx ()
+                expr <- Logical(expr, operator, right)
+
+            expr
+
+        and andEx (): IExpr =
+            let mutable expr = equality ()
+
+            while matchToken [| AND |] do
+                let operator = previous ()
+                let right = equality ()
+                expr <- Logical(expr, operator, right)
+
+            expr
+
         and varDeclaration () =
             let name : Token =
                 consume IDENTIFIER "Expect variable name"
@@ -230,7 +250,7 @@ module Parser =
                 expr <- new Binary(expr, operator, right)
 
             expr
-        and equality () =
+        and equality (): IExpr =
             let mutable expr = comparison ()
 
             while matchToken [| BANGEQUAL; EQUALEQUAL |] do

@@ -28,3 +28,4 @@ var c = "global c";
 print a;
 print b;
 print c;
+print nil or 2;

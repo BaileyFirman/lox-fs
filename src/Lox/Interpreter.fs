@@ -33,19 +33,13 @@ module Interpreter =
             | _ -> true
 
         member private __.isEqual left right =
-            if left = null && right = null
-            then
-                true
-            else
-                if left = null
-                then
-                    false
-                else
-                    left = right
+            if left = null && right = null then true
+            else if left = null then false
+            else left = right
 
         member __.InterpretExpression expression = __.evaluate expression
 
-        member __.Execute (stmt: IStmt) =
+        member __.Execute(stmt: IStmt) =
             stmt.Accept(this) |> ignore
             null
 
@@ -54,18 +48,14 @@ module Interpreter =
 
             env <- environment
 
-            let executions =
-                statements
-                |> List.map __.Execute
+            let executions = statements |> List.map __.Execute
 
             let z = executions.Length
 
             env <- previous
 
         member __.Interpret(statements: seq<IStmt>) =
-            statements
-            |> Seq.toArray
-            |> Array.map __.Execute
+            statements |> Seq.toArray |> Array.map __.Execute
 
         member __.Stringify value =
             match value with
@@ -123,14 +113,26 @@ module Interpreter =
                 | MINUS -> (-(right)) :> obj
                 | _ -> new obj () // Unreachable
 
-            member __.VisitVariableExpr(expr: Variable) =
-                env.Get expr.Name
+            member __.VisitVariableExpr(expr: Variable) = env.Get expr.Name
 
             member __.VisitAssignExpr(expr: Assign) =
-                let value =  __.evaluate expr.Value
+                let value = __.evaluate expr.Value
                 printfn $"??{value}"
                 env.Assign(expr.Name, value)
                 value
+
+            member __.VisitLogicalExpr(expr: Logical) =
+                let left = __.evaluate expr.Left
+
+                if expr.Operator.tokenType = OR then
+                    if __.isTruthy (left) then
+                        left
+                    else
+                        __.evaluate expr.Right
+                else if __.isTruthy (left) then
+                    left
+                else
+                    __.evaluate expr.Right
 
         interface Stmt.IStmtVisitor<obj> with
             member __.VisitExpressionStmt(stmt: Expression) =
@@ -144,14 +146,11 @@ module Interpreter =
                 null
 
             member __.VisitVarStmt(stmt: Var) =
-                let mutable value: obj = null
+                let mutable value : obj = null
 
                 value <- __.evaluate stmt.Initializer
 
                 env.Define stmt.Name.lexeme value
-                #if DEBUG
-                // printfn $"Interpreter::Stmt::VisitVarStmt name {stmt.Name} <- {value} {stmt.Name.lexeme}"
-                #endif
                 null
 
             member __.VisitBlockStmt(stmt: Block) =
@@ -160,8 +159,7 @@ module Interpreter =
                 null
 
             member __.VisitIfStmt(stmt: If) =
-                if __.isTruthy(__.evaluate(stmt.Condition))
-                then
+                if __.isTruthy (__.evaluate (stmt.Condition)) then
                     __.Execute stmt.ThenBranch
                 else
                     match stmt.ElseBranch with

@@ -42,3 +42,5 @@ module AstPrinter =
             member __.VisitVariableExpr(stmt: Variable) : string = ""
 
             member __.VisitAssignExpr(expr: Assign) = ""
+
+            member __.VisitLogicalExpr(expr: Logical) = ""
