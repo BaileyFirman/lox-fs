@@ -75,8 +75,7 @@ module Parser =
                 expr <- Logical(expr, operator, right)
 
             expr
-
-        and andEx (): IExpr =
+        and andEx () : IExpr =
             let mutable expr = equality ()
 
             while matchToken [| AND |] do
@@ -85,7 +84,6 @@ module Parser =
                 expr <- Logical(expr, operator, right)
 
             expr
-
         and varDeclaration () =
             let name : Token =
                 consume IDENTIFIER "Expect variable name"
@@ -130,29 +128,25 @@ module Parser =
             consume LEFTPAREN "Expect '(' after 'for'."
             |> ignore
 
-            let initializer = 
-                if matchToken [| SEMICOLON |]
-                then
+            let initializer =
+                if matchToken [| SEMICOLON |] then
                     None
-                else if matchToken [| VAR |]
-                then
+                else if matchToken [| VAR |] then
                     Some(varDeclaration ())
                 else
                     Some(expressionStatement ())
 
             let condition =
-                if not (check SEMICOLON)
-                then
+                if not (check SEMICOLON) then
                     Some(expression ())
                 else
                     None
-            
+
             consume SEMICOLON "Expect ';' after loop condition."
             |> ignore
 
-            let increment = 
-                if not (check RIGHTPAREN)
-                then
+            let increment =
+                if not (check RIGHTPAREN) then
                     Some(expression ())
                 else
                     None
@@ -163,7 +157,7 @@ module Parser =
             let mutable body = statement ()
 
             match increment with
-            | Some i -> body <- (Block([ body; Expression(i)]))
+            | Some i -> body <- (Block([ body; Expression(i) ]))
             | None -> ()
 
             match condition with
@@ -171,13 +165,12 @@ module Parser =
             | None -> body <- While(Literal(true), body)
 
             match initializer with
-            | Some i -> body <- Block([i; body])
+            | Some i -> body <- Block([ i; body ])
             | None -> ()
 
             body
         and ifStatement () =
-            consume LEFTPAREN "Expect '(' after if."
-            |> ignore
+            consume LEFTPAREN "Expect '(' after if." |> ignore
 
             let condition = expression ()
 
@@ -187,8 +180,7 @@ module Parser =
             let thenBranch = statement ()
             // let mutable elseBrach = null
             let elseBranch =
-                if matchToken [| ELSE |]
-                then
+                if matchToken [| ELSE |] then
                     Some(statement ())
                 else
                     None
@@ -201,12 +193,15 @@ module Parser =
             |> ignore
 
             Print value :> IStmt
-        and whileStatement (): IStmt =
+        and whileStatement () : IStmt =
             consume LEFTPAREN "Expect '(' after 'while'."
             |> ignore
+
             let condition = expression ()
+
             consume RIGHTPAREN "Expect ')' after condition."
             |> ignore
+
             let body = statement ()
 
             While(condition, body) :> IStmt
@@ -274,7 +269,37 @@ module Parser =
                 let right = unary ()
                 Unary(operator, right) :> IExpr
             else
-                primary ()
+                call ()
+        and call () =
+            let mutable expr = primary ()
+            let mutable breakWhile = false
+
+            while not breakWhile do
+                if matchToken [| LEFTPAREN |] then
+                    expr <- finishCall (expr)
+                else
+                    breakWhile <- true
+
+            expr
+        and finishCall callee =
+            let mutable arguments = []
+
+            if not (check RIGHTPAREN) then
+                if arguments.Length >= 255
+                then
+                    error (peek ()) "Can't have more than 255 arguments."
+                else
+                    arguments <- arguments @ [ expression () ]
+
+                while matchToken [| COMMA |] do
+                    arguments <- arguments @ [ expression () ]
+            else
+                ()
+
+            let paren =
+                consume RIGHTPAREN "Expect ')' after arguments"
+
+            Call(callee, paren, arguments)
         and factor () =
             let mutable expr = unary ()
 
@@ -311,7 +336,7 @@ module Parser =
                 expr <- new Binary(expr, operator, right)
 
             expr
-        and equality (): IExpr =
+        and equality () : IExpr =
             let mutable expr = comparison ()
 
             while matchToken [| BANGEQUAL; EQUALEQUAL |] do

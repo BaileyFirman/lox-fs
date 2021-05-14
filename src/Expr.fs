@@ -12,6 +12,7 @@ module Expr =
         abstract VisitAssignExpr : Assign -> 'T
         abstract VisitLogicalExpr : Logical -> 'T
         abstract VisitVoidExpr : VoidExpr -> 'T
+        abstract VisitCallExpr : Call -> 'T
 
     and IExpr =
         abstract Accept : IVisitor<'T> -> 'T
@@ -67,3 +68,11 @@ module Expr =
 
         interface IExpr with
             member __.Accept(visitor: IVisitor<'T>) = visitor.VisitLogicalExpr(this)
+
+    and Call(callee, paren, arguments) as this =
+        member __.Callee : IExpr = callee
+        member __.Paren : Token = paren
+        member __.Argurments : list<IExpr> = arguments
+
+        interface IExpr with
+            member __.Accept(visitor: IVisitor<'T>) = visitor.VisitCallExpr(this)
