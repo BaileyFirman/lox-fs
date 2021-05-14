@@ -1,8 +1,7 @@
-src/Lox/bin
-src/Lox/obj
+src/bin
+src/obj
+src/net5.0
 /obj
-/src/Tools/GenerateAst/bin
-/src/Tools/GenerateAst/obj
 .ionide
 .fake
 .vscode
