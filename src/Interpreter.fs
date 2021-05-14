@@ -29,7 +29,7 @@ module Interpreter =
         member private __.isTruthy(value: obj) : bool =
             match value with
             | null -> false
-            | value when value.GetType() = typeof<bool> -> Convert.ToBoolean obj
+            | value when value.GetType() = typeof<bool> -> Convert.ToBoolean value
             | _ -> true
 
         member private __.isEqual left right =
@@ -117,7 +117,6 @@ module Interpreter =
 
             member __.VisitAssignExpr(expr: Assign) =
                 let value = __.evaluate expr.Value
-                printfn $"??{value}"
                 env.Assign(expr.Name, value)
                 value
 
@@ -133,6 +132,8 @@ module Interpreter =
                     left
                 else
                     __.evaluate expr.Right
+
+            member __.VisitVoidExpr(expr: VoidExpr) = null
 
         interface Stmt.IStmtVisitor<obj> with
             member __.VisitExpressionStmt(stmt: Expression) =
@@ -170,3 +171,5 @@ module Interpreter =
                     match stmt.ElseBranch with
                     | Some eb -> __.Execute eb
                     | None -> null
+
+            member __.VisitVoidStmt(expr: VoidStmt) = null

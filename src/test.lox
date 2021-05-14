@@ -1,31 +1,8 @@
-// print "One is the lonliest number that you'll ever see";
-// print "Two can be as bad as one";
-// print "It's the lonliest number since the number one";
-// print true;
-// print 2 + 1;
-//var mgy = 1;
-//var mg = 42;
-//print mgy + mg;
-// var asdf = "asdf";
-//print "asdf";
+var a = 0;
+var temp = 0;
 
-var a = "global a";
-var b = "global b";
-var c = "global c";
-{
-  var a = "outer a";
-  var b = "outer b";
-  {
-    var a = "inner a";
-    print a;
-    print b;
-    print c;
-  }
+for (var b = 1; a < 10000000; b = temp + b) {
   print a;
-  print b;
-  print c;
+  temp = a;
+  a = b;
 }
-print a;
-print b;
-print c;
-print nil or 2;

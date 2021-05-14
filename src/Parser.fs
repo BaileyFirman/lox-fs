@@ -114,14 +114,67 @@ module Parser =
                 error next message
                 next
         and statement () : IStmt =
-            if matchToken [| IF |] then
+            if matchToken [| FOR |] then
+                forStatement ()
+            else if matchToken [| IF |] then
                 ifStatement ()
             else if matchToken [| PRINT |] then
                 printStatement ()
+            else if matchToken [| WHILE |] then
+                whileStatement ()
             else if matchToken [| LEFTBRACE |] then
                 Block(block ()) :> IStmt
             else
                 expressionStatement ()
+        and forStatement () =
+            consume LEFTPAREN "Expect '(' after 'for'."
+            |> ignore
+
+            let initializer = 
+                if matchToken [| SEMICOLON |]
+                then
+                    None
+                else if matchToken [| VAR |]
+                then
+                    Some(varDeclaration ())
+                else
+                    Some(expressionStatement ())
+
+            let condition =
+                if not (check SEMICOLON)
+                then
+                    Some(expression ())
+                else
+                    None
+            
+            consume SEMICOLON "Expect ';' after loop condition."
+            |> ignore
+
+            let increment = 
+                if not (check RIGHTPAREN)
+                then
+                    Some(expression ())
+                else
+                    None
+
+            consume RIGHTPAREN "Expect ')' after for clauses."
+            |> ignore
+
+            let mutable body = statement ()
+
+            match increment with
+            | Some i -> body <- (Block([ body; Expression(i)]))
+            | None -> ()
+
+            match condition with
+            | Some c -> body <- While(c, body)
+            | None -> body <- While(Literal(true), body)
+
+            match initializer with
+            | Some i -> body <- Block([i; body])
+            | None -> ()
+
+            body
         and ifStatement () =
             consume LEFTPAREN "Expect '(' after if."
             |> ignore
