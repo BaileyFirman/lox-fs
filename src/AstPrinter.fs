@@ -46,3 +46,5 @@ module AstPrinter =
             member __.VisitLogicalExpr(expr: Logical) = ""
 
             member __.VisitVoidExpr(expr: VoidExpr) = ""
+
+            member __.VisitCallExpr(expr: Call) = ""

@@ -75,4 +75,5 @@ module Expr =
         member __.Argurments : list<IExpr> = arguments
 
         interface IExpr with
-            member __.Accept(visitor: IVisitor<'T>) = visitor.VisitCallExpr(this)
+            member __.Accept(visitor: IVisitor<'T>) =
+                visitor.VisitCallExpr(this)

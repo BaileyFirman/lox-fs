@@ -12,6 +12,7 @@ module Stmt =
         abstract VisitIfStmt : If -> 'T
         abstract VisitWhileStmt : While -> 'T
         abstract VisitVoidStmt : VoidStmt -> 'T
+        abstract VisitFuncStmt : Func -> 'T
 
     and IStmt =
         abstract Accept : IStmtVisitor<'T> -> 'T
@@ -59,3 +60,11 @@ module Stmt =
 
         interface IStmt with
             member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitWhileStmt(this)
+
+    and Func(name, fparams, body) as this =
+        member __.Name : Token = name
+        member __.Fparams : list<Token> = fparams
+        member __.Body : list<IStmt> = body
+
+        interface IStmt with
+            member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitFuncStmt(this)
