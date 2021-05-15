@@ -31,6 +31,7 @@ module Parser =
             if isAtEnd () then
                 false
             else
+                // printfn $"{next.tokenType} {tokenType}"
                 next.tokenType = tokenType
 
         let rec matchToken (tokens: TokenType []) : bool =
@@ -100,7 +101,9 @@ module Parser =
 
             Var(name, intializer) :> IStmt
         and declaration () =
-            if matchToken [| VAR |] then
+            if matchToken [| FUN |] then
+                func("function")
+            else if matchToken [| VAR |] then
                 varDeclaration ()
             else
                 statement ()
@@ -111,6 +114,30 @@ module Parser =
                 let next = peek ()
                 error next message
                 next
+        and func kind: IStmt =
+            let name = consume IDENTIFIER $"Expect {kind} name."
+            consume LEFTPAREN $"Expect '(' after {kind} name."
+            |> ignore
+
+            let mutable parameters = []
+
+            if not(check RIGHTPAREN)
+            then
+                parameters <- parameters @ [ (consume IDENTIFIER $"Expect parameter name.") ]
+
+                while matchToken [| COMMA |] do
+                    parameters <- parameters @ [ (consume IDENTIFIER $"Expect parameter name.") ]
+            else ()
+
+            consume RIGHTPAREN $"Expect ')' after parameters name."
+            |> ignore
+
+            consume LEFTBRACE $"Expect '{{' before {kind} body."
+            |> ignore
+
+            let body = block ()
+
+            Func(name, parameters, body) :> IStmt
         and statement () : IStmt =
             if matchToken [| FOR |] then
                 forStatement ()
@@ -250,15 +277,15 @@ module Parser =
             else
                 ()
 
-            if matchToken [| LEFTPAREN |] then
-                let expr = expression ()
+            // if matchToken [| LEFTPAREN |] then
+            //     let expr = expression ()
 
-                consume RIGHTPAREN "Expect ')' after expression."
-                |> ignore
+            //     consume RIGHTPAREN "Expect ')' after expression."
+            //     |> ignore
 
-                ret <- Grouping(expr) :> IExpr
-            else
-                ()
+            //     ret <- Grouping(expr) :> IExpr
+            // else
+            //     ()
 
             ret
         and unary () =
@@ -276,10 +303,10 @@ module Parser =
 
             while not breakWhile do
                 if matchToken [| LEFTPAREN |] then
+                    
                     expr <- finishCall (expr)
                 else
                     breakWhile <- true
-
             expr
         and finishCall callee =
             let mutable arguments = []
@@ -298,7 +325,7 @@ module Parser =
 
             let paren =
                 consume RIGHTPAREN "Expect ')' after arguments"
-
+            
             Call(callee, paren, arguments)
         and factor () =
             let mutable expr = unary ()
