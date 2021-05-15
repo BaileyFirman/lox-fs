@@ -6,12 +6,33 @@ open Stmt
 open Env
 open Microsoft.FSharp.Core
 open System
-open System.Collections.Generic
 
 module Interpreter =
-    type Interpreter() as this =
+    type ILoxCallable =
+        abstract member Arity : int
+        abstract member Call : Interpreter -> list<obj> -> obj
+
+    and LoxFunction(declaration) =
+        member __.Declaration : Func = declaration
+
+        interface ILoxCallable with
+            member __.Arity : int = __.Declaration.Fparams.Length
+
+            member __.Call (interpreter: Interpreter) (arguments: obj list) : obj =
+                let environment = Env(interpreter.Globals)
+
+                declaration.Fparams
+                |> Seq.iteri (fun i x -> environment.Define x.lexeme arguments.[i])
+
+                interpreter.ExecuteBlock declaration.Body environment
+                null
+
+    and Interpreter() as this =
         // let mutable environment = new Dictionary<string, obj>()
-        let mutable env = Env(None)
+        let mutable globals = Env(None)
+        let mutable env = globals
+
+        member public __.Globals = Some(globals)
 
         member private __.evaluate(expr: IExpr) : obj = expr.Accept(this)
 
