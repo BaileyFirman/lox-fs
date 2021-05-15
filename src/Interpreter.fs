@@ -154,6 +154,16 @@ module Interpreter =
                 else
                     __.evaluate expr.Right
 
+            member __.VisitCallExpr(expr : Call) =
+                let callee = __.evaluate(expr.Callee)
+
+                let arguments =
+                    expr.Argurments
+                    |> List.map __.evaluate
+
+                let loxfn = callee :?> ILoxCallable
+                loxfn.Call this arguments
+
             member __.VisitVoidExpr(expr: VoidExpr) = null
 
         interface Stmt.IStmtVisitor<obj> with
@@ -192,5 +202,10 @@ module Interpreter =
                     match stmt.ElseBranch with
                     | Some eb -> __.Execute eb
                     | None -> null
+
+            member __.VisitFuncStmt(stmt: Func) =
+                let func = LoxFunction(stmt)
+                env.Define stmt.Name.lexeme func
+                null
 
             member __.VisitVoidStmt(expr: VoidStmt) = null
