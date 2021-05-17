@@ -11,15 +11,10 @@ module Expr =
         abstract VisitVariableExpr : Variable -> 'T
         abstract VisitAssignExpr : Assign -> 'T
         abstract VisitLogicalExpr : Logical -> 'T
-        abstract VisitVoidExpr : VoidExpr -> 'T
         abstract VisitCallExpr : Call -> 'T
 
     and IExpr =
         abstract Accept : IVisitor<'T> -> 'T
-
-    and VoidExpr() as this =
-        interface IExpr with
-            member __.Accept(visitor: IVisitor<'T>) = visitor.VisitVoidExpr(this)
 
     and Binary(left, operator, right) as this =
         member __.Left : IExpr = left
