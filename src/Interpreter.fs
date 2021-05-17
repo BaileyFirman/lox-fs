@@ -1,12 +1,12 @@
 namespace LoxFs
 
-open TokenType
-open Expr
-open Stmt
 open Env
-open Microsoft.FSharp.Core
-open System
 open Ex
+open Expr
+open Microsoft.FSharp.Core
+open Stmt
+open System
+open TokenType
 
 module Interpreter =
     let globalEnv = Env(None)
@@ -89,86 +89,71 @@ module Interpreter =
 
         member __.ExecuteBlock = executeBlock
 
-        member __.Interpret(statements: seq<IStmt>) = interpret statements
+        member __.Interpret(statements) = interpret statements
 
         interface Expr.IVisitor<obj> with
-            member __.VisitBinaryExpr(expr: Binary) : obj =
-                let left : obj = evaluate expr.Left
-                let right : obj = evaluate expr.Right
+            member __.VisitBinaryExpr(expr) =
+                let l = evaluate expr.Left
+                let r = evaluate expr.Right
 
                 match expr.Operator.tokenType with
-                | MINUS -> (left :?> double) - (right :?> double) :> obj
-                | SLASH -> (left :?> double) / (right :?> double) :> obj
-                | STAR -> (left :?> double) * (right :?> double) :> obj
-                | GREATER -> (left :?> double) > (right :?> double) :> obj
-                | GREATEREQUAL -> (left :?> double) >= (right :?> double) :> obj
-                | LESS -> (left :?> double) < (right :?> double) :> obj
-                | LESSEQUAL -> (left :?> double) <= (right :?> double) :> obj
-                | EQUALEQUAL -> (isEqual left right) :> obj
-                | BANGEQUAL -> (not (isEqual left right)) :> obj
+                | MINUS -> (l :?> double) - (r :?> double) :> obj
+                | SLASH -> (l :?> double) / (r :?> double) :> obj
+                | STAR -> (l :?> double) * (r :?> double) :> obj
+                | GREATER -> (l :?> double) > (r :?> double) :> obj
+                | GREATEREQUAL -> (l :?> double) >= (r :?> double) :> obj
+                | LESS -> (l :?> double) < (r :?> double) :> obj
+                | LESSEQUAL -> (l :?> double) <= (r :?> double) :> obj
+                | EQUALEQUAL -> (isEqual l r) :> obj
+                | BANGEQUAL -> (not (isEqual l r)) :> obj
                 | PLUS ->
-                    if ((left :? double) && (right :? double)) then
-                        (left :?> double) + (right :?> double) :> obj
-                    else
-                        (if ((left :? string) && (right :? string)) then
-                             (left :?> string) + (right :?> string) :> obj
-                         else
-                             new obj ())
-                | _ -> new obj () // Unreachable
+                    match l, r with
+                    | l, r when (l :? double) && (r :? double) -> ((l :?> double) + (r :?> double)) :> obj
+                    | l, r when (l :? string) && (r :? string) -> ((l :?> string) + (r :?> string)) :> obj
+                    | _ -> null
+                | _ -> null
 
-            member __.VisitGroupingExpr(expr: Grouping) = evaluate expr.Expression
+            member __.VisitGroupingExpr(expr) = evaluate expr.Expression
 
-            member __.VisitLiteralExpr(expr: Literal) = expr.Value
+            member __.VisitLiteralExpr(expr) = expr.Value
 
-            member __.VisitUnaryExpr(expr: Unary) : obj =
-                let rightObj : obj = evaluate expr.Right
+            member __.VisitUnaryExpr(expr) =
+                let rightObj = evaluate expr.Right
 
-                let right =
-                    // We can't implicitly take an obj with the underlying type int and autocast AFAIK
-                    if (rightObj.GetType() = int.GetType()) then
-                        (float (rightObj :?> int))
-                    else
-                        rightObj :?> float
+                let right = // We can't implicitly take an obj with the underlying type int and autocast AFAIK
+                    match rightObj with
+                    | :? int as Int -> Int |> float
+                    | _ -> rightObj :?> float
 
                 match expr.Operator.tokenType with
-                | BANG -> (not (isTruthy right)) :> obj
+                | BANG -> right |> isTruthy |> not :> obj
                 | MINUS -> (-(right)) :> obj
-                | _ -> new obj () // Unreachable
+                | _ -> null
 
-            member __.VisitVariableExpr(expr: Variable) = env.Get expr.Name
+            member __.VisitVariableExpr(expr) = env.Get expr.Name
 
-            member __.VisitAssignExpr(expr: Assign) =
+            member __.VisitAssignExpr(expr) =
                 let value = evaluate expr.Value
-
-                if value.GetType() = typeof<double> then
-                    env.Assign(expr.Name, (value :?> double))
-                else if value.GetType() = typeof<string> then
-                    env.Assign(expr.Name, (value :?> double))
-                else
-                    env.Assign(expr.Name, value)
-
+                env.Assign(expr.Name, value)
                 value
 
-            member __.VisitLogicalExpr(expr: Logical) =
+            member __.VisitLogicalExpr(expr) =
                 let left = evaluate expr.Left
 
-                if expr.Operator.tokenType = OR then
-                    if isTruthy left then
-                        left
-                    else
-                        evaluate expr.Right
-                else if isTruthy left then
-                    left
-                else
-                    evaluate expr.Right
+                match expr.Operator.tokenType with
+                | OR ->
+                    match left with
+                    | l when isTruthy l -> left
+                    | _ -> evaluate expr.Right
+                | _ when isTruthy left -> left
+                | _ -> evaluate expr.Right
 
-            member __.VisitCallExpr(expr: Call) =
-                let callee = evaluate (expr.Callee)
+            member __.VisitCallExpr(expr) =
+                let loxfn = evaluate (expr.Callee) :?> ILoxCallable
 
-                let arguments = expr.Argurments |> List.map evaluate
-
-                let loxfn = callee :?> ILoxCallable
-                loxfn.Call this arguments
+                expr.Argurments
+                |> List.map evaluate
+                |> loxfn.Call this
 
         interface Stmt.IStmtVisitor<obj> with
             member __.VisitExpressionStmt(stmt: Expression) =
@@ -187,11 +172,13 @@ module Interpreter =
                 stmt.Initializer
                 |> evaluate
                 |> env.Define stmt.Name.lexeme
+
                 null
 
             member __.VisitWhileStmt(stmt) =
                 while stmt.Condition |> evaluate |> isTruthy do
                     execute stmt.Body |> ignore
+
                 null
 
             member __.VisitBlockStmt(stmt) =
