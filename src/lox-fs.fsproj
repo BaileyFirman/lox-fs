@@ -6,6 +6,7 @@
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Ex.fs" />
     <Compile Include="TokenType.fs" />
     <Compile Include="Error.fs" />
     <Compile Include="Token.fs" />
@@ -15,6 +16,7 @@
     <Compile Include="Scanner.fs" />
     <Compile Include="AstPrinter.fs" />
     <Compile Include="Interpreter.fs" />
+    <!-- <Compile Include="LoxCallable.fs" /> -->
     <Compile Include="Parser.fs" />
     <Compile Include="Lox.fs" />
   </ItemGroup>
