@@ -145,12 +145,26 @@ module Parser =
                 ifStatement ()
             else if matchToken [| PRINT |] then
                 printStatement ()
+            else if matchToken [| RETURN |] then
+                returnStatement ()
             else if matchToken [| WHILE |] then
                 whileStatement ()
             else if matchToken [| LEFTBRACE |] then
                 Block(block ()) :> IStmt
             else
                 expressionStatement ()
+        and returnStatement (): IStmt =
+            let keyword = previous ()
+            let mutable value : IExpr option = None
+
+            if not (check SEMICOLON) then
+                value <- Some(expression())
+            else ()
+
+            consume SEMICOLON "Expect ';' after return value"
+            |> ignore
+
+            Return(keyword, value) :> IStmt
         and forStatement () =
             consume LEFTPAREN "Expect '(' after 'for'."
             |> ignore

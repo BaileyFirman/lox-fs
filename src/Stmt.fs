@@ -13,6 +13,7 @@ module Stmt =
         abstract VisitWhileStmt : While -> 'T
         abstract VisitVoidStmt : VoidStmt -> 'T
         abstract VisitFuncStmt : Func -> 'T
+        abstract VisitReturnStmt : Return -> 'T
 
     and IStmt =
         abstract Accept : IStmtVisitor<'T> -> 'T
@@ -68,3 +69,10 @@ module Stmt =
 
         interface IStmt with
             member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitFuncStmt(this)
+
+    and Return(keyword, value) as this =
+        member __.Keyword : Token = keyword
+        member __.Value : IExpr option = value
+
+        interface IStmt with
+            member __.Accept(visitor: IStmtVisitor<'T>) = visitor.VisitReturnStmt(this)
