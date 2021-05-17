@@ -102,7 +102,7 @@ module Parser =
             Var(name, intializer) :> IStmt
         and declaration () =
             if matchToken [| FUN |] then
-                func("function")
+                func ("function")
             else if matchToken [| VAR |] then
                 varDeclaration ()
             else
@@ -114,20 +114,26 @@ module Parser =
                 let next = peek ()
                 error next message
                 next
-        and func kind: IStmt =
-            let name = consume IDENTIFIER $"Expect {kind} name."
+        and func kind : IStmt =
+            let name =
+                consume IDENTIFIER $"Expect {kind} name."
+
             consume LEFTPAREN $"Expect '(' after {kind} name."
             |> ignore
 
             let mutable parameters = []
 
-            if not(check RIGHTPAREN)
-            then
-                parameters <- parameters @ [ (consume IDENTIFIER $"Expect parameter name.") ]
+            if not (check RIGHTPAREN) then
+                parameters <-
+                    parameters
+                    @ [ (consume IDENTIFIER $"Expect parameter name.") ]
 
                 while matchToken [| COMMA |] do
-                    parameters <- parameters @ [ (consume IDENTIFIER $"Expect parameter name.") ]
-            else ()
+                    parameters <-
+                        parameters
+                        @ [ (consume IDENTIFIER $"Expect parameter name.") ]
+            else
+                ()
 
             consume RIGHTPAREN $"Expect ')' after parameters name."
             |> ignore
@@ -317,17 +323,17 @@ module Parser =
 
             while not breakWhile do
                 if matchToken [| LEFTPAREN |] then
-                    
+
                     expr <- finishCall (expr)
                 else
                     breakWhile <- true
+
             expr
         and finishCall callee =
             let mutable arguments = []
 
             if not (check RIGHTPAREN) then
-                if arguments.Length >= 255
-                then
+                if arguments.Length >= 255 then
                     error (peek ()) "Can't have more than 255 arguments."
                 else
                     arguments <- arguments @ [ expression () ]
@@ -339,7 +345,7 @@ module Parser =
 
             let paren =
                 consume RIGHTPAREN "Expect ')' after arguments"
-            
+
             Call(callee, paren, arguments)
         and factor () =
             let mutable expr = unary ()
