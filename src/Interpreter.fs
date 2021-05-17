@@ -6,14 +6,20 @@ open Stmt
 open Env
 open Microsoft.FSharp.Core
 open System
+open Ex
 
 module Interpreter =
+    let globalsOut = Env(None)
+
     type ILoxCallable =
         abstract member Arity : int
         abstract member Call : Interpreter -> list<obj> -> obj
 
     and LoxFunction(declaration) =
+
         member __.Declaration : Func = declaration
+
+        override __.ToString () = $"<fn {__.Declaration.Name.lexeme}>"
 
         interface ILoxCallable with
             member __.Arity : int = __.Declaration.Fparams.Length
@@ -24,15 +30,29 @@ module Interpreter =
                 declaration.Fparams
                 |> Seq.iteri (fun i x -> environment.Define x.lexeme arguments.[i])
 
-                interpreter.ExecuteBlock declaration.Body environment
-                null
-
+                let retVal =
+                    try
+                        interpreter.ExecuteBlock declaration.Body environment
+                        None
+                    with ex ->
+                        if (ex :? ReturnEx)
+                        then
+                            let ez = (ex :?> ReturnEx)
+                            // printfn $">>>> {ex.GetType()}"
+                            ez.Data0
+                        else
+                            None
+                let retData =
+                    match retVal with
+                    | Some r -> r
+                    | None -> null
+                retData
     and Interpreter() as this =
-        // let mutable environment = new Dictionary<string, obj>()
-        let mutable globals = Env(None)
-        let mutable env = globals
+        // let globals = globalsOut 
+        let mutable env = globalsOut
 
-        member public __.Globals = Some(globals)
+        member public __.Env = Some(env)
+        member public __.Globals = Some(globalsOut)
 
         member private __.evaluate(expr: IExpr) : obj = expr.Accept(this)
 
@@ -64,22 +84,23 @@ module Interpreter =
             stmt.Accept(this) |> ignore
             null
 
-        member __.ExecuteBlock (statements: list<IStmt>) (environment: Env) =
-            let previous = env // consider optional
-
-            env <- environment
-
-            let executions = statements |> List.map __.Execute
-
-            let z = executions.Length
-
-            env <- previous
-
+        member __.ExecuteBlock (statements: list<IStmt>) (environment: Env): unit =
+            let previous = env
+            try
+                env <- environment
+                let executions =
+                    statements
+                    |> List.map __.Execute
+                ()
+            finally
+                env <- previous
+            ()
         member __.Interpret(statements: seq<IStmt>) =
             statements |> Seq.toArray |> Array.map __.Execute
 
         member __.Stringify value =
             match value with
+            // | null -> "nil"
             | value when value.GetType() = typeof<double> ->
                 let text = value.ToString()
 
@@ -87,7 +108,6 @@ module Interpreter =
                     text.[0..(text.Length - 2)]
                 else
                     text
-            | null -> "nil"
             | _ -> value.ToString()
 
         interface Expr.IVisitor<obj> with
@@ -106,6 +126,7 @@ module Interpreter =
                 | EQUALEQUAL -> (__.isEqual left right) :> obj
                 | BANGEQUAL -> (not (__.isEqual left right)) :> obj
                 | PLUS ->
+                    // printfn $"{left} {right}"
                     if ((left :? double) && (right :? double)) then
                         (left :?> double) + (right :?> double) :> obj
                     else
@@ -138,7 +159,19 @@ module Interpreter =
 
             member __.VisitAssignExpr(expr: Assign) =
                 let value = __.evaluate expr.Value
-                env.Assign(expr.Name, value)
+
+                // printfn $"XYZ {(value :?> Literal).Value.GetType()}"
+
+                if value.GetType() = typeof<double>
+                then
+                    env.Assign(expr.Name, (value :?> double))
+                else if value.GetType() = typeof<string>
+                then
+                    env.Assign(expr.Name, (value :?> double))
+                else
+                    env.Assign(expr.Name, value)
+
+                // env.Assign(expr.Name, value)
                 value
 
             member __.VisitLogicalExpr(expr: Logical) =
@@ -154,12 +187,10 @@ module Interpreter =
                 else
                     __.evaluate expr.Right
 
-            member __.VisitCallExpr(expr : Call) =
-                let callee = __.evaluate(expr.Callee)
+            member __.VisitCallExpr(expr: Call) =
+                let callee = __.evaluate (expr.Callee)
 
-                let arguments =
-                    expr.Argurments
-                    |> List.map __.evaluate
+                let arguments = expr.Argurments |> List.map __.evaluate
 
                 let loxfn = callee :?> ILoxCallable
                 loxfn.Call this arguments
@@ -174,7 +205,21 @@ module Interpreter =
             member __.VisitPrintStmt(stmt: Print) =
                 // printfn $"Interpreter::Stmt::VisitPrintStmt {stmt}"
                 let value = __.evaluate stmt.Expression
-                printfn $"{__.Stringify value}"
+
+                if value = null then
+                    printf ""
+                else if value.GetType() = typeof<double>
+                then
+                    let r = (value :?> double)
+                    printfn $"{__.Stringify r}"
+                else if value.GetType() = typeof<string>
+                then
+                    let r = (value :?> string)
+                    printfn $"{__.Stringify r}"
+                else
+                    printfn $"{__.Stringify value}"
+
+                // printfn $"{__.Stringify value}"
                 null
 
             member __.VisitVarStmt(stmt: Var) =
@@ -182,14 +227,23 @@ module Interpreter =
 
                 value <- __.evaluate stmt.Initializer
 
-                env.Define stmt.Name.lexeme value
+                if value.GetType() = typeof<double>
+                then
+                    // printfn $"FUCK YOU {(value :?> double)}"
+                    env.Define stmt.Name.lexeme (value :?> double)
+                else if value.GetType() = typeof<string>
+                then
+                    // printfn $"FUCK YOU {(value :?> string)}"
+                    env.Define stmt.Name.lexeme (value :?> string)
+                else
+                    env.Define stmt.Name.lexeme value
                 null
 
             member __.VisitWhileStmt(stmt: While) =
-                while (__.isTruthy(__.evaluate(stmt.Condition))) do
+                while (__.isTruthy (__.evaluate (stmt.Condition))) do
                     __.Execute stmt.Body |> ignore
-
                 null
+
             member __.VisitBlockStmt(stmt: Block) =
                 let mutable newEnv = Env(Some(env))
                 __.ExecuteBlock stmt.Statements newEnv
@@ -206,6 +260,15 @@ module Interpreter =
             member __.VisitFuncStmt(stmt: Func) =
                 let func = LoxFunction(stmt)
                 env.Define stmt.Name.lexeme func
+                null
+
+            member __.VisitReturnStmt(stmt: Return) =
+                let value : obj option =
+                    match stmt.Value with
+                    | Some v -> Some(__.evaluate v)
+                    | None -> None
+
+                raise (ReturnEx value)
                 null
 
             member __.VisitVoidStmt(expr: VoidStmt) = null
