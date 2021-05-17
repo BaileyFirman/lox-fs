@@ -9,16 +9,15 @@ open System
 open Ex
 
 module Interpreter =
-    let globalsOut = Env(None)
+    let globalEnv = Env(None)
 
     type ILoxCallable =
         abstract member Arity : int
         abstract member Call : Interpreter -> list<obj> -> obj
 
     and LoxFunction(declaration, closure) =
-
-        member __.Declaration : Func = declaration
         member __.Closure : Env = closure
+        member __.Declaration : Func = declaration
 
         override __.ToString() = $"<fn {__.Declaration.Name.lexeme}>"
 
@@ -29,77 +28,67 @@ module Interpreter =
                 let environment = Env(Some(closure))
 
                 declaration.Fparams
-                |> Seq.iteri (fun i x -> environment.Define x.lexeme arguments.[i])
+                |> Seq.iteri (fun i t -> environment.Define t.lexeme arguments.[i])
 
-                let retVal =
-                    try
-                        interpreter.ExecuteBlock declaration.Body environment
-                        None
-                    with ex ->
-                        if (ex :? ReturnEx) then
-                            let ez = (ex :?> ReturnEx)
-                            ez.Data0
-                        else
-                            None
-
-                let retData =
-                    match retVal with
-                    | Some r -> r
-                    | None -> null
-
-                retData
+                try
+                    interpreter.ExecuteBlock declaration.Body environment
+                    null
+                with ex ->
+                    match ex with
+                    | :? ReturnEx as returnEx ->
+                        match returnEx.Data0 with
+                        | Some r -> r
+                        | None -> null
+                    | _ -> null
 
     and Interpreter() as this =
-        // let globals = globalsOut
-        let mutable env = globalsOut
+        let mutable env = globalEnv
 
-        member public __.Env = Some(env)
-        member public __.Globals = Some(globalsOut)
+        let evaluate (expr: IExpr) = expr.Accept(this)
 
-        member private __.evaluate(expr: IExpr) : obj = expr.Accept(this)
-
-        member private __.parenthesize (exprs: seq<IExpr>) (name: string) : string =
-            let formattedExprs =
-                exprs
-                |> Seq.map (fun expr -> $" {expr.Accept(this)}")
-                |> String.Concat
-
-            [| "("; name; formattedExprs; ")" |]
-            |> String.Concat
-
-        member private __.print(expr: IExpr) = expr.Accept(this)
-
-        member private __.isTruthy(value: obj) : bool =
-            match value with
-            | null -> false
-            | value when value.GetType() = typeof<bool> -> Convert.ToBoolean value
-            | _ -> true
-
-        member private __.isEqual left right =
-            if left = null && right = null then true
-            else if left = null then false
-            else left = right
-
-        member __.InterpretExpression expression = __.evaluate expression
-
-        member __.Execute(stmt: IStmt) =
+        let execute (stmt: IStmt) =
             stmt.Accept(this) |> ignore
             null
+
+        let executeBlock (statements: list<IStmt>) (blockEnv: Env) : unit =
+            let previousEnv = env
+
+            try
+                env <- blockEnv
+                statements
+                |> List.map execute
+                |> ignore
+            finally
+                env <- previousEnv
+
+        let isEqual left right =
+            match left, right with
+            | null, null -> true
+            | null, _ -> false
+            | _, _ -> left = right
+
+        let isTruthy (x: obj) =
+            match x with
+            | :? bool as Bool -> Convert.ToBoolean Bool
+            | null -> false
+            | _ -> true
+
+        member public __.Env = Some(env)
+        member public __.Globals = Some(globalEnv)
 
         member __.ExecuteBlock (statements: list<IStmt>) (environment: Env) : unit =
             let previous = env
 
             try
                 env <- environment
-                let executions = statements |> List.map __.Execute
-                ()
+                statements
+                |> List.map execute
+                |> ignore
             finally
                 env <- previous
 
-            ()
-
         member __.Interpret(statements: seq<IStmt>) =
-            statements |> Seq.toArray |> Array.map __.Execute
+            statements |> Seq.toArray |> Array.map execute
 
         member __.Stringify value =
             match value with
@@ -115,8 +104,8 @@ module Interpreter =
 
         interface Expr.IVisitor<obj> with
             member __.VisitBinaryExpr(expr: Binary) : obj =
-                let left : obj = __.evaluate expr.Left
-                let right : obj = __.evaluate expr.Right
+                let left : obj = evaluate expr.Left
+                let right : obj = evaluate expr.Right
 
                 match expr.Operator.tokenType with
                 | MINUS -> (left :?> double) - (right :?> double) :> obj
@@ -126,10 +115,9 @@ module Interpreter =
                 | GREATEREQUAL -> (left :?> double) >= (right :?> double) :> obj
                 | LESS -> (left :?> double) < (right :?> double) :> obj
                 | LESSEQUAL -> (left :?> double) <= (right :?> double) :> obj
-                | EQUALEQUAL -> (__.isEqual left right) :> obj
-                | BANGEQUAL -> (not (__.isEqual left right)) :> obj
+                | EQUALEQUAL -> (isEqual left right) :> obj
+                | BANGEQUAL -> (not (isEqual left right)) :> obj
                 | PLUS ->
-                    // printfn $"{left} {right}"
                     if ((left :? double) && (right :? double)) then
                         (left :?> double) + (right :?> double) :> obj
                     else
@@ -139,12 +127,12 @@ module Interpreter =
                              new obj ())
                 | _ -> new obj () // Unreachable
 
-            member __.VisitGroupingExpr(expr: Grouping) = __.evaluate expr.Expression
+            member __.VisitGroupingExpr(expr: Grouping) = evaluate expr.Expression
 
             member __.VisitLiteralExpr(expr: Literal) = expr.Value
 
             member __.VisitUnaryExpr(expr: Unary) : obj =
-                let rightObj : obj = __.evaluate expr.Right
+                let rightObj : obj = evaluate expr.Right
 
                 let right =
                     // We can't implicitly take an obj with the underlying type int and autocast AFAIK
@@ -154,16 +142,14 @@ module Interpreter =
                         rightObj :?> float
 
                 match expr.Operator.tokenType with
-                | BANG -> (not (__.isTruthy right)) :> obj
+                | BANG -> (not (isTruthy right)) :> obj
                 | MINUS -> (-(right)) :> obj
                 | _ -> new obj () // Unreachable
 
             member __.VisitVariableExpr(expr: Variable) = env.Get expr.Name
 
             member __.VisitAssignExpr(expr: Assign) =
-                let value = __.evaluate expr.Value
-
-                // printfn $"XYZ {(value :?> Literal).Value.GetType()}"
+                let value = evaluate expr.Value
 
                 if value.GetType() = typeof<double> then
                     env.Assign(expr.Name, (value :?> double))
@@ -171,27 +157,25 @@ module Interpreter =
                     env.Assign(expr.Name, (value :?> double))
                 else
                     env.Assign(expr.Name, value)
-
-                // env.Assign(expr.Name, value)
                 value
 
             member __.VisitLogicalExpr(expr: Logical) =
-                let left = __.evaluate expr.Left
+                let left = evaluate expr.Left
 
                 if expr.Operator.tokenType = OR then
-                    if __.isTruthy (left) then
+                    if isTruthy left then
                         left
                     else
-                        __.evaluate expr.Right
-                else if __.isTruthy (left) then
+                        evaluate expr.Right
+                else if isTruthy left then
                     left
                 else
-                    __.evaluate expr.Right
+                    evaluate expr.Right
 
             member __.VisitCallExpr(expr: Call) =
-                let callee = __.evaluate (expr.Callee)
+                let callee = evaluate (expr.Callee)
 
-                let arguments = expr.Argurments |> List.map __.evaluate
+                let arguments = expr.Argurments |> List.map evaluate
 
                 let loxfn = callee :?> ILoxCallable
                 loxfn.Call this arguments
@@ -200,12 +184,11 @@ module Interpreter =
 
         interface Stmt.IStmtVisitor<obj> with
             member __.VisitExpressionStmt(stmt: Expression) =
-                __.evaluate stmt.Expression |> ignore
+                evaluate stmt.Expression |> ignore
                 null
 
             member __.VisitPrintStmt(stmt: Print) =
-                // printfn $"Interpreter::Stmt::VisitPrintStmt {stmt}"
-                let value = __.evaluate stmt.Expression
+                let value = evaluate stmt.Expression
 
                 if value = null then
                     printf ""
@@ -222,7 +205,7 @@ module Interpreter =
             member __.VisitVarStmt(stmt: Var) =
                 let mutable value : obj = null
 
-                value <- __.evaluate stmt.Initializer
+                value <- evaluate stmt.Initializer
 
                 if value.GetType() = typeof<double> then
                     // printfn $"FUCK YOU {(value :?> double)}"
@@ -232,13 +215,11 @@ module Interpreter =
                     env.Define stmt.Name.lexeme (value :?> string)
                 else
                     env.Define stmt.Name.lexeme value
-
                 null
 
             member __.VisitWhileStmt(stmt: While) =
-                while (__.isTruthy (__.evaluate (stmt.Condition))) do
-                    __.Execute stmt.Body |> ignore
-
+                while (isTruthy (evaluate (stmt.Condition))) do
+                    execute stmt.Body |> ignore
                 null
 
             member __.VisitBlockStmt(stmt: Block) =
@@ -247,11 +228,11 @@ module Interpreter =
                 null
 
             member __.VisitIfStmt(stmt: If) =
-                if __.isTruthy (__.evaluate (stmt.Condition)) then
-                    __.Execute stmt.ThenBranch
+                if isTruthy (evaluate (stmt.Condition)) then
+                    execute stmt.ThenBranch
                 else
                     match stmt.ElseBranch with
-                    | Some eb -> __.Execute eb
+                    | Some eb -> execute eb
                     | None -> null
 
             member __.VisitFuncStmt(stmt: Func) =
@@ -262,7 +243,7 @@ module Interpreter =
             member __.VisitReturnStmt(stmt: Return) =
                 let value : obj option =
                     match stmt.Value with
-                    | Some v -> Some(__.evaluate v)
+                    | Some v -> Some(evaluate v)
                     | None -> None
 
                 raise (ReturnEx value)
