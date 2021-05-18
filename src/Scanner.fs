@@ -10,29 +10,23 @@ module Scanner =
         let errorHandler : ErrorHandler = errorHandler
         let source : string = source
         let mutable tokens : List<Token> = []
-        let mutable start = 0
         let mutable current = 0
         let mutable line = 1
+        let mutable start = 0
 
         let isAtEnd () = current >= source.Length
 
-        let peek () =
-            if isAtEnd () then
-                '\u0004'
-            else
-                source.[current]
+        let _peek offset =
+            match current + offset with
+            | co when co >= source.Length -> '\u0004'
+            | _ -> source.[current + offset]
 
-        let peekNext () =
-            if (current + 1 >= source.Length) then
-                '\u0004'
-            else
-                source.[current + 1]
-
+        let peek () = _peek 0
+        let peekNext () = _peek 1
 
         let advance () =
-            let c = source.[current]
             current <- current + 1
-            c
+            source.[current - 1]
 
         let addLiteralToken tokenType literal =
             let text = source.[start..(current - 1)]
@@ -42,26 +36,24 @@ module Scanner =
 
         let addToken tokenType = addLiteralToken tokenType null
 
-        let matchToken expected : bool =
-            if isAtEnd () then
-                false
-            else if source.[current] <> expected then
-                false
-            else
+        let matchToken expected =
+            match current with
+            | c when c >= source.Length -> false
+            | c when source.[c] <> expected -> false
+            | _ ->
                 current <- current + 1
                 true
 
         let number () =
-            while (Char.IsDigit(peek ())) do
+            while peek () |> Char.IsDigit do
                 advance () |> ignore
 
-            if (peek () = '.' && (Char.IsDigit(peekNext ()))) then
+            match peek () = '.' && peekNext () |> Char.IsDigit with
+            | true ->
                 advance () |> ignore
-
-                while (Char.IsDigit(peekNext ())) do
+                while peekNext () |> Char.IsDigit do
                     advance () |> ignore
-            else
-                ()
+            | false -> ()
 
             let double =
                 Double.Parse source.[start..(current - 1)]
@@ -69,14 +61,10 @@ module Scanner =
             addLiteralToken NUMBER double
 
         let identifier () =
-            while (Char.IsLetterOrDigit(peek ())) do
+            while peek () |> Char.IsLetterOrDigit do
                 advance () |> ignore
 
             let text = source.[start..(current - 1)]
-
-            #if DEBUG
-            // printfn $"Scanner::Identifier text <- <{text}>"
-            #endif
 
             let tokenType =
                 match text with
@@ -104,13 +92,29 @@ module Scanner =
             let c = advance ()
 
             let addCompoundToken compoundType normalType =
-                let kind =
-                    if matchToken '=' then
-                        compoundType
-                    else
-                        normalType
+                match matchToken '=' with
+                | true -> addToken compoundType
+                | false -> addToken normalType
 
-                addToken kind
+            let addSlashToken () =
+                match matchToken '/' with
+                | true ->
+                    while peek () <> '\n' && isAtEnd () |> not do
+                        advance () |> ignore
+                | false -> addToken SLASH
+
+            let addCommaToken () =
+                while peek () <> '"' && isAtEnd () |> not do
+                    match peek () with
+                    | '\n' -> line <- line + 1
+                    | _ -> ()
+                    advance () |> ignore
+
+                advance () |> ignore
+
+                let value = source.[(start + 1)..(current - 2)] // maybe bug
+                addLiteralToken STRING value
+                ()
 
             match c with
             | '(' -> addToken LEFTPAREN
@@ -127,41 +131,21 @@ module Scanner =
             | '=' -> addCompoundToken EQUALEQUAL EQUAL
             | '<' -> addCompoundToken LESSEQUAL LESS
             | '>' -> addCompoundToken GREATEREQUAL GREATER
-            | '/' ->
-                if matchToken '/' then
-                    while (peek () <> '\n' && not (isAtEnd ())) do
-                        advance () |> ignore
-                else
-                    addToken SLASH
+            | '/' -> addSlashToken ()
             | ' '
             | '\r'
             | '\t' -> ()
             | '\n' -> line <- line + 1
-            | '"' ->
-                while (peek () <> '"' && not (isAtEnd ())) do
-                    if peek () = '\n' then line <- line + 1
+            | '"' -> addCommaToken ()
+            | c when Char.IsDigit c -> number ()
+            | c when Char.IsLetter c -> identifier ()
+            | _ -> ()
 
-                    advance () |> ignore
-
-                advance () |> ignore
-
-                let value = source.[(start + 1)..(current - 2)] // maybe bug
-                addLiteralToken STRING value
-
-                ()
-            | c ->
-                if (Char.IsDigit c) then
-                    number ()
-                else if (Char.IsLetter c) then
-                    identifier ()
-                else
-                    ()
-
-        member __.ScanTokens : seq<Token> =
+        member __.ScanTokens =
             while not (isAtEnd ()) do
                 start <- current
                 scanToken ()
 
             (Token(EOF, "", null, 0) :: tokens)
             |> List.rev
-            |> List.toSeq
+            |> List.toArray
