@@ -11,106 +11,97 @@ module Parser =
 
         let mutable current = 0
 
+        let report line at message = failwith $"{line}{at}{message}"
         let peek () = tokens.[current]
         let previous () = tokens.[current - 1]
         let isAtEnd () = peek().tokenType = EOF
 
         let advance () =
-            let offset =
-                if peek().tokenType = EOF then
-                    current
-                else
-                    current + 1
+            match peek().tokenType with
+            | EOF -> ()
+            | _ -> current <- current + 1
 
-            current <- offset
             previous ()
 
         let check tokenType =
-            let next = peek ()
+            match peek().tokenType with
+            | EOF -> false
+            | t -> t = tokenType
 
-            if isAtEnd () then
-                false
-            else
-                // printfn $"{next.tokenType} {tokenType}"
-                next.tokenType = tokenType
-
-        let rec matchToken (tokens: TokenType []) : bool =
-            let existsMatch =
-                tokens |> Array.exists (fun x -> check x)
-
-            if existsMatch then
+        let rec matchToken token =
+            match token with
+            | t when check t ->
                 advance () |> ignore
                 true
-            else
-                false
+            | _ -> false
 
-        let report line at message = failwith $"{line}{at}{message}"
+        let rec matchTokens tokens =
+            match tokens with
+            | t when t |> Array.exists check ->
+                advance () |> ignore
+                true
+            | _ -> false
 
         let error (token: Token) message =
-            if token.tokenType = EOF then
-                report token.line " at end" message
-            else
-                report token.line " at " $"{token.lexeme}'{message}"
+            let reportLine = report token.line
+
+            match token.tokenType with
+            | EOF -> reportLine " at end" message
+            | _ -> reportLine " at " $"{token.lexeme}'{message}"
 
         let rec expression () = assignment () :> IExpr
         and assignment () =
-            let expr : IExpr = orEx ()
+            let expr : IExpr = orExpression ()
 
-            if matchToken [| EQUAL |] then
+            match matchToken EQUAL with
+            | true ->
                 let equals = previous ()
                 let value = assignment ()
 
-                if (expr :? Variable) then
+                match expr with
+                | :? Variable ->
                     let name = (expr :?> Variable).Name
                     Assign(name, value) :> IExpr
-                else
-                    error equals "Invalid assignment target."
-            else
-                expr
-        and orEx () =
-            let mutable expr = andEx ()
+                | _ -> error equals "Invalid assignment target."
+            | false -> expr
+        and orExpression () =
+            let mutable expr = andExpression ()
 
-            while matchToken [| OR |] do
-                let operator = previous ()
-                let right = andEx ()
-                expr <- Logical(expr, operator, right)
+            while matchToken OR do
+                expr <- Logical(expr, previous (), andExpression ())
 
             expr
-        and andEx () : IExpr =
+        and andExpression () : IExpr =
             let mutable expr = equality ()
 
-            while matchToken [| AND |] do
-                let operator = previous ()
-                let right = equality ()
-                expr <- Logical(expr, operator, right)
+            while matchToken AND do
+                expr <- Logical(expr, previous (), equality ())
 
             expr
         and varDeclaration () =
             let name : Token =
                 consume IDENTIFIER "Expect variable name"
 
-            let mutable intializer : IExpr = Literal(null) :> IExpr
-
-            if matchToken [| EQUAL |] then
-                intializer <- expression ()
-            else
-                ()
+            let intializer =
+                match matchToken EQUAL with
+                | true -> expression ()
+                | false -> Literal(null) :> IExpr
 
             consume SEMICOLON "Expect ';' after variable declaration."
             |> ignore
 
             Var(name, intializer) :> IStmt
         and declaration () =
-            if matchToken [| FUN |] then
+            if matchToken FUN then
                 func ("function")
-            else if matchToken [| VAR |] then
+            else if matchToken VAR then
                 varDeclaration ()
             else
                 statement ()
-        and consume tokenType (message: string) : Token =
-            if check tokenType then
-                advance ()
-            else
+        and consume tokenType message =
+            match tokenType with
+            | t when check t -> advance ()
+            | _ ->
                 let next = peek ()
                 error next message
                 next
@@ -128,7 +119,7 @@ module Parser =
                     parameters
                     @ [ (consume IDENTIFIER $"Expect parameter name.") ]
 
-                while matchToken [| COMMA |] do
+                while matchTokens [| COMMA |] do
                     parameters <-
                         parameters
                         @ [ (consume IDENTIFIER $"Expect parameter name.") ]
@@ -145,27 +136,28 @@ module Parser =
 
             Func(name, parameters, body) :> IStmt
         and statement () : IStmt =
-            if matchToken [| FOR |] then
+            if matchTokens [| FOR |] then
                 forStatement ()
-            else if matchToken [| IF |] then
+            else if matchTokens [| IF |] then
                 ifStatement ()
-            else if matchToken [| PRINT |] then
+            else if matchTokens [| PRINT |] then
                 printStatement ()
-            else if matchToken [| RETURN |] then
+            else if matchTokens [| RETURN |] then
                 returnStatement ()
-            else if matchToken [| WHILE |] then
+            else if matchTokens [| WHILE |] then
                 whileStatement ()
-            else if matchToken [| LEFTBRACE |] then
+            else if matchTokens [| LEFTBRACE |] then
                 Block(block ()) :> IStmt
             else
                 expressionStatement ()
-        and returnStatement (): IStmt =
+        and returnStatement () : IStmt =
             let keyword = previous ()
             let mutable value : IExpr option = None
 
             if not (check SEMICOLON) then
-                value <- Some(expression())
-            else ()
+                value <- Some(expression ())
+            else
+                ()
 
             consume SEMICOLON "Expect ';' after return value"
             |> ignore
@@ -176,9 +168,9 @@ module Parser =
             |> ignore
 
             let initializer =
-                if matchToken [| SEMICOLON |] then
+                if matchTokens [| SEMICOLON |] then
                     None
-                else if matchToken [| VAR |] then
+                else if matchTokens [| VAR |] then
                     Some(varDeclaration ())
                 else
                     Some(expressionStatement ())
@@ -227,7 +219,7 @@ module Parser =
             let thenBranch = statement ()
             // let mutable elseBrach = null
             let elseBranch =
-                if matchToken [| ELSE |] then
+                if matchTokens [| ELSE |] then
                     Some(statement ())
                 else
                     None
@@ -272,27 +264,27 @@ module Parser =
         and primary () : IExpr =
             let mutable ret : IExpr = Literal(false) :> IExpr
 
-            if matchToken [| FALSE |] then
+            if matchTokens [| FALSE |] then
                 ret <- Literal(false) :> IExpr
             else
                 ()
 
-            if matchToken [| TRUE |] then
+            if matchTokens [| TRUE |] then
                 ret <- Literal(true) :> IExpr
             else
                 ()
 
-            if matchToken [| NIL |] then
+            if matchTokens [| NIL |] then
                 ret <- Literal(null) :> IExpr
             else
                 ()
 
-            if matchToken [| NUMBER; STRING |] then
+            if matchTokens [| NUMBER; STRING |] then
                 ret <- Literal(previous().literal) :> IExpr
             else
                 ()
 
-            if matchToken [| IDENTIFIER |] then
+            if matchTokens [| IDENTIFIER |] then
                 ret <- Variable(previous ()) :> IExpr
             else
                 ()
@@ -309,9 +301,8 @@ module Parser =
 
             ret
         and unary () =
-            let matchTokens = [| BANG; MINUS |]
 
-            if matchToken matchTokens then
+            if matchTokens [| BANG; MINUS |] then
                 let operator = previous ()
                 let right = unary ()
                 Unary(operator, right) :> IExpr
@@ -322,7 +313,7 @@ module Parser =
             let mutable breakWhile = false
 
             while not breakWhile do
-                if matchToken [| LEFTPAREN |] then
+                if matchTokens [| LEFTPAREN |] then
 
                     expr <- finishCall (expr)
                 else
@@ -338,7 +329,7 @@ module Parser =
                 else
                     arguments <- arguments @ [ expression () ]
 
-                while matchToken [| COMMA |] do
+                while matchTokens [| COMMA |] do
                     arguments <- arguments @ [ expression () ]
             else
                 ()
@@ -350,9 +341,7 @@ module Parser =
         and factor () =
             let mutable expr = unary ()
 
-            let matchTokens = [| SLASH; STAR |]
-
-            while matchToken matchTokens do
+            while matchTokens [| SLASH; STAR |] do
                 let operator = previous ()
                 let right = unary ()
                 expr <- Binary(expr, operator, right)
@@ -360,9 +349,8 @@ module Parser =
             expr
         and term () =
             let mutable expr = factor ()
-            let matchTokens = [| MINUS; PLUS |]
 
-            while matchToken matchTokens do
+            while matchTokens [| MINUS; PLUS |] do
                 let operator = previous ()
                 let right = factor ()
                 expr <- Binary(expr, operator, right)
@@ -371,13 +359,13 @@ module Parser =
         and comparison () =
             let mutable expr = term ()
 
-            let matchTokens =
+            let matchTokenz =
                 [| GREATER
                    GREATEREQUAL
                    LESS
                    LESSEQUAL |]
 
-            while matchToken matchTokens do
+            while matchTokens matchTokenz do
                 let operator = previous ()
                 let right = term ()
                 expr <- new Binary(expr, operator, right)
@@ -386,7 +374,7 @@ module Parser =
         and equality () : IExpr =
             let mutable expr = comparison ()
 
-            while matchToken [| BANGEQUAL; EQUALEQUAL |] do
+            while matchTokens [| BANGEQUAL; EQUALEQUAL |] do
                 let operator = previous ()
                 let right = comparison ()
                 expr <- Binary(expr, operator, right)
