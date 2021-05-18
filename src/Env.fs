@@ -11,8 +11,8 @@ module Env =
         let mutable enclosing = enclosingEnv
 
         member public __.Assign(name: Token, value) =
-            match values.ContainsKey name.lexeme with
-            | true -> values.[name.lexeme] <- value
+            match values.ContainsKey name.Lexeme with
+            | true -> values.[name.Lexeme] <- value
             | false ->
                 match enclosing with
                 | Some e -> e.Assign(name, value)
@@ -26,8 +26,8 @@ module Env =
         member public __.Define (name) value = values.[name] <- value
 
         member public __.Get(name: Token) =
-            match values.ContainsKey name.lexeme with
-            | true -> values.[name.lexeme]
+            match values.ContainsKey name.Lexeme with
+            | true -> values.[name.Lexeme]
             | false ->
                 match enclosing with
                 | Some e -> e.Get name

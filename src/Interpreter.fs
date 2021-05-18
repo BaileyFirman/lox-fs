@@ -19,7 +19,7 @@ module Interpreter =
         member __.Closure : Env = closure
         member __.Declaration : Func = declaration
 
-        override __.ToString() = $"<fn {__.Declaration.Name.lexeme}>"
+        override __.ToString() = $"<fn {__.Declaration.Name.Lexeme}>"
 
         interface ILoxCallable with
             member __.Arity : int = __.Declaration.Fparams.Length
@@ -28,7 +28,7 @@ module Interpreter =
                 let environment = Env(Some(closure))
 
                 declaration.Fparams
-                |> Seq.iteri (fun i t -> environment.Define t.lexeme arguments.[i])
+                |> Seq.iteri (fun i t -> environment.Define t.Lexeme arguments.[i])
 
                 try
                     interpreter.ExecuteBlock declaration.Body environment
@@ -96,7 +96,7 @@ module Interpreter =
                 let l = evaluate expr.Left
                 let r = evaluate expr.Right
 
-                match expr.Operator.tokenType with
+                match expr.Operator.TokenType with
                 | MINUS -> (l :?> double) - (r :?> double) :> obj
                 | SLASH -> (l :?> double) / (r :?> double) :> obj
                 | STAR -> (l :?> double) * (r :?> double) :> obj
@@ -125,7 +125,7 @@ module Interpreter =
                     | :? int as Int -> Int |> float
                     | _ -> rightObj :?> float
 
-                match expr.Operator.tokenType with
+                match expr.Operator.TokenType with
                 | BANG -> right |> isTruthy |> not :> obj
                 | MINUS -> (-(right)) :> obj
                 | _ -> null
@@ -140,7 +140,7 @@ module Interpreter =
             member __.VisitLogicalExpr(expr) =
                 let left = evaluate expr.Left
 
-                match expr.Operator.tokenType with
+                match expr.Operator.TokenType with
                 | OR ->
                     match left with
                     | l when isTruthy l -> left
@@ -171,7 +171,7 @@ module Interpreter =
             member __.VisitVarStmt(stmt) =
                 stmt.Initializer
                 |> evaluate
-                |> env.Define stmt.Name.lexeme
+                |> env.Define stmt.Name.Lexeme
 
                 null
 
@@ -195,7 +195,7 @@ module Interpreter =
 
             member __.VisitFuncStmt(stmt) =
                 LoxFunction(stmt, env)
-                |> env.Define stmt.Name.lexeme
+                |> env.Define stmt.Name.Lexeme
 
                 null
 

@@ -12,17 +12,17 @@ module Parser =
         let report line at message = failwith $"{line}{at}{message}"
         let peek () = tokens.[current]
         let previous () = tokens.[current - 1]
-        let isAtEnd () = peek().tokenType = EOF
+        let isAtEnd () = peek().TokenType = EOF
 
         let advance () =
-            match peek().tokenType with
+            match peek().TokenType with
             | EOF -> ()
             | _ -> current <- current + 1
 
             previous ()
 
         let check tokenType =
-            match peek().tokenType with
+            match peek().TokenType with
             | EOF -> false
             | t -> t = tokenType
 
@@ -41,11 +41,11 @@ module Parser =
             | _ -> false
 
         let error (token: Token) message =
-            let reportLine = report token.line
+            let reportLine = report token.Line
 
-            match token.tokenType with
+            match token.TokenType with
             | EOF -> reportLine " at end" message
-            | _ -> reportLine " at " $"{token.lexeme}'{message}"
+            | _ -> reportLine " at " $"{token.Lexeme}'{message}"
 
         let rec expression () = assignment () :> IExpr
         and assignment () =
@@ -262,7 +262,7 @@ module Parser =
             else if matchToken NIL then
                 Literal(null) :> IExpr
             else if matchTokens [| NUMBER; STRING |] then
-                Literal(previous().literal) :> IExpr
+                Literal(previous().Literal) :> IExpr
             else if matchToken IDENTIFIER then
                 Variable(previous ()) :> IExpr
             else
