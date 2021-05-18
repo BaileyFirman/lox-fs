@@ -1,14 +1,12 @@
 namespace LoxFs
 
-open Token
-open TokenType
 open Expr
 open Stmt
+open Token
+open TokenType
 
 module Parser =
-    type Parser(tokens: seq<Token>) =
-        let tokens : Token [] = tokens |> Seq.toArray
-
+    type Parser(tokens: Token[]) =
         let mutable current = 0
 
         let report line at message = failwith $"{line}{at}{message}"
@@ -114,17 +112,20 @@ module Parser =
 
             let mutable parameters = []
 
-            if not (check RIGHTPAREN) then
+            let appendParameter () =
                 parameters <-
-                    parameters
-                    @ [ (consume IDENTIFIER $"Expect parameter name.") ]
+                    consume IDENTIFIER $"Expect parameter name."
+                    :: parameters
 
-                while matchTokens [| COMMA |] do
-                    parameters <-
-                        parameters
-                        @ [ (consume IDENTIFIER $"Expect parameter name.") ]
-            else
-                ()
+            match check RIGHTPAREN |> not with
+            | true ->
+                appendParameter ()
+
+                while matchToken COMMA do
+                    appendParameter ()
+            | false -> ()
+
+            parameters <- List.rev <| parameters
 
             consume RIGHTPAREN $"Expect ')' after parameters name."
             |> ignore
@@ -132,32 +133,29 @@ module Parser =
             consume LEFTBRACE $"Expect '{{' before {kind} body."
             |> ignore
 
-            let body = block ()
-
-            Func(name, parameters, body) :> IStmt
-        and statement () : IStmt =
-            if matchTokens [| FOR |] then
+            Func(name, parameters, block ()) :> IStmt
+        and statement () =
+            if matchToken FOR then
                 forStatement ()
-            else if matchTokens [| IF |] then
+            else if matchToken IF then
                 ifStatement ()
-            else if matchTokens [| PRINT |] then
+            else if matchToken PRINT then
                 printStatement ()
-            else if matchTokens [| RETURN |] then
+            else if matchToken RETURN then
                 returnStatement ()
-            else if matchTokens [| WHILE |] then
+            else if matchToken WHILE then
                 whileStatement ()
-            else if matchTokens [| LEFTBRACE |] then
+            else if matchToken LEFTBRACE then
                 Block(block ()) :> IStmt
             else
                 expressionStatement ()
-        and returnStatement () : IStmt =
+        and returnStatement () =
             let keyword = previous ()
-            let mutable value : IExpr option = None
 
-            if not (check SEMICOLON) then
-                value <- Some(expression ())
-            else
-                ()
+            let value =
+                match check SEMICOLON |> not with
+                | true -> Some(expression ())
+                | false -> None
 
             consume SEMICOLON "Expect ';' after return value"
             |> ignore
@@ -168,27 +166,25 @@ module Parser =
             |> ignore
 
             let initializer =
-                if matchTokens [| SEMICOLON |] then
+                if matchToken SEMICOLON then
                     None
-                else if matchTokens [| VAR |] then
+                else if matchToken VAR then
                     Some(varDeclaration ())
                 else
                     Some(expressionStatement ())
 
             let condition =
-                if not (check SEMICOLON) then
-                    Some(expression ())
-                else
-                    None
+                match check SEMICOLON |> not with
+                | true -> Some(expression ())
+                | false -> None
 
             consume SEMICOLON "Expect ';' after loop condition."
             |> ignore
 
             let increment =
-                if not (check RIGHTPAREN) then
-                    Some(expression ())
-                else
-                    None
+                match check RIGHTPAREN |> not with
+                | true -> Some(expression ())
+                | false -> None
 
             consume RIGHTPAREN "Expect ')' after for clauses."
             |> ignore
@@ -217,12 +213,11 @@ module Parser =
             |> ignore
 
             let thenBranch = statement ()
-            // let mutable elseBrach = null
+
             let elseBranch =
-                if matchTokens [| ELSE |] then
-                    Some(statement ())
-                else
-                    None
+                match matchToken ELSE with
+                | true -> Some(statement ())
+                | false -> None
 
             If(condition, thenBranch, elseBranch) :> IStmt
         and printStatement () =
@@ -241,9 +236,7 @@ module Parser =
             consume RIGHTPAREN "Expect ')' after condition."
             |> ignore
 
-            let body = statement ()
-
-            While(condition, body) :> IStmt
+            While(condition, statement ()) :> IStmt
         and expressionStatement () =
             let value = expression ()
 
@@ -252,87 +245,58 @@ module Parser =
 
             Expression(value) :> IStmt
         and block () =
-            let mutable statements : list<IStmt> = []
+            let mutable statements = []
 
-            while ((not (check RIGHTBRACE)) && (not (isAtEnd ()))) do
-                statements <- statements @ [ declaration () ]
+            while check RIGHTBRACE |> not && isAtEnd () |> not do
+                statements <- declaration () :: statements
 
             consume RIGHTBRACE "Expect '}' after block."
             |> ignore
 
-            statements
-        and primary () : IExpr =
-            let mutable ret : IExpr = Literal(false) :> IExpr
-
-            if matchTokens [| FALSE |] then
-                ret <- Literal(false) :> IExpr
+            statements |> List.rev
+        and primary () =
+            if matchToken FALSE then
+                Literal(false) :> IExpr
+            else if matchToken TRUE then
+                Literal(true) :> IExpr
+            else if matchToken NIL then
+                Literal(null) :> IExpr
+            else if matchTokens [| NUMBER; STRING |] then
+                Literal(previous().literal) :> IExpr
+            else if matchToken IDENTIFIER then
+                Variable(previous ()) :> IExpr
             else
-                ()
-
-            if matchTokens [| TRUE |] then
-                ret <- Literal(true) :> IExpr
-            else
-                ()
-
-            if matchTokens [| NIL |] then
-                ret <- Literal(null) :> IExpr
-            else
-                ()
-
-            if matchTokens [| NUMBER; STRING |] then
-                ret <- Literal(previous().literal) :> IExpr
-            else
-                ()
-
-            if matchTokens [| IDENTIFIER |] then
-                ret <- Variable(previous ()) :> IExpr
-            else
-                ()
-
-            // if matchToken [| LEFTPAREN |] then
-            //     let expr = expression ()
-
-            //     consume RIGHTPAREN "Expect ')' after expression."
-            //     |> ignore
-
-            //     ret <- Grouping(expr) :> IExpr
-            // else
-            //     ()
-
-            ret
+                Literal(false) :> IExpr
         and unary () =
-
-            if matchTokens [| BANG; MINUS |] then
-                let operator = previous ()
-                let right = unary ()
-                Unary(operator, right) :> IExpr
-            else
-                call ()
+            match matchTokens [| BANG; MINUS |] with
+            | true -> Unary(previous (), unary ()) :> IExpr
+            | false -> call ()
         and call () =
             let mutable expr = primary ()
             let mutable breakWhile = false
 
             while not breakWhile do
-                if matchTokens [| LEFTPAREN |] then
-
-                    expr <- finishCall (expr)
-                else
-                    breakWhile <- true
+                match matchToken LEFTPAREN with
+                | true -> expr <- finishCall (expr)
+                | false -> breakWhile <- true
 
             expr
         and finishCall callee =
             let mutable arguments = []
 
-            if not (check RIGHTPAREN) then
-                if arguments.Length >= 255 then
-                    error (peek ()) "Can't have more than 255 arguments."
-                else
-                    arguments <- arguments @ [ expression () ]
+            let appendArgument () = arguments <- expression () :: arguments
 
-                while matchTokens [| COMMA |] do
-                    arguments <- arguments @ [ expression () ]
-            else
-                ()
+            match check RIGHTPAREN |> not with
+            | true ->
+                match arguments.Length with
+                | a when a >= 255 -> error (peek ()) "Can't have more than 255 arguments."
+                | _ -> appendArgument ()
+
+                while matchToken COMMA do
+                    appendArgument ()
+            | false -> ()
+
+            arguments <- List.rev <| arguments
 
             let paren =
                 consume RIGHTPAREN "Expect ')' after arguments"
@@ -359,13 +323,13 @@ module Parser =
         and comparison () =
             let mutable expr = term ()
 
-            let matchTokenz =
+            let matchableTokens =
                 [| GREATER
                    GREATEREQUAL
                    LESS
                    LESSEQUAL |]
 
-            while matchTokens matchTokenz do
+            while matchTokens matchableTokens do
                 let operator = previous ()
                 let right = term ()
                 expr <- new Binary(expr, operator, right)
@@ -383,16 +347,9 @@ module Parser =
         and parse () =
             let mutable statements = []
 
-            while not (isAtEnd ()) do
-                statements <-
-                    // printfn "Adding Statement"
-                    // statements @ [ statement () ]
-                    statements @ [ declaration () ]
+            while isAtEnd () |> not do
+                statements <- declaration () :: statements
 
-            // tokens
-            // |> Seq.iter(fun x -> printfn $"{x.lexeme} {x.line} {x.literal} {x.tokenType}")
-            // expression ()
-
-            statements
+            statements |> List.rev
 
         member __.Start() = parse ()
