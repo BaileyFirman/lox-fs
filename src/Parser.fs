@@ -258,7 +258,7 @@ module Parser =
             consume SEMICOLON "Expect ';' after expression."
             |> ignore
 
-            Expression value :> IStmt
+            Expression(value) :> IStmt
         and block () =
             let mutable statements : list<IStmt> = []
 
