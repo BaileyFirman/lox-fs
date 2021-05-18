@@ -1,6 +1,6 @@
-src/bin
-src/obj
-src/net5.0
+bin
+obj
+net5.0
 /obj
 .ionide
 .fake
