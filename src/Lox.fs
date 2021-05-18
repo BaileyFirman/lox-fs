@@ -4,7 +4,6 @@ open System
 open System.IO
 open Scanner
 open Error
-open AstPrinter
 open Parser
 open Interpreter
 open System.Diagnostics
@@ -20,29 +19,28 @@ module LoxFs =
 
         let run source =
             let sw = Stopwatch()
-            sw.Start() |> ignore
+            sw.Start()
 
             let scanner = Scanner(source, errorHandler)
             let tokens = scanner.ScanTokens
+            sw.Stop()
+            printfn $"DEBUG Scanned {tokens.Length} Token(s) In {sw.ElapsedMilliseconds}ms"
+
+            sw.Reset()
+            sw.Start()
 
             let parser = Parser(tokens)
             let statements = parser.Start()
+            sw.Stop()
+            printfn $"DEBUG Parsed {statements.Length} Statements(s) In {sw.ElapsedMilliseconds}ms"
 
-            printfn $"Parsed In |> {sw.ElapsedMilliseconds}ms"
-
-            let astPrinter = AstPrinter()
-
-            sw.Reset() |> ignore
-            sw.Start() |> ignore
+            sw.Reset()
+            sw.Start()
 
             let interpreter = Interpreter()
-
-            let returnValue = interpreter.Interpret statements
-
-            sw.Stop() |> ignore
-            printfn $"Interpreted In |> {sw.ElapsedMilliseconds}ms"
-
-            // printfn $"-> {returnValue}"
+            interpreter.Interpret statements |> ignore
+            sw.Stop()
+            printfn $"DEBUG Interpreted In {sw.ElapsedMilliseconds}ms"
 
             ()
 

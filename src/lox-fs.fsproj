@@ -14,9 +14,7 @@
     <Compile Include="Expr.fs" />
     <Compile Include="Stmt.fs" />
     <Compile Include="Scanner.fs" />
-    <Compile Include="AstPrinter.fs" />
     <Compile Include="Interpreter.fs" />
-    <!-- <Compile Include="LoxCallable.fs" /> -->
     <Compile Include="Parser.fs" />
     <Compile Include="Lox.fs" />
   </ItemGroup>
